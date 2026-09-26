@@ -1,5 +1,5 @@
 // Relative to the voice's normal speed (1 = normal; browsers accept 0.1–10).
-const SPEECH_RATE = 1.7;
+const SPEECH_RATE = 1.5;
 
 /**
  * Speaks a cue when the page is visible. In the background, browsers may
