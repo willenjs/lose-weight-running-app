@@ -51,5 +51,7 @@ the page is visible.
 3. Tap "Pular fase" until a phase is running, wait until ~20 s remain, then switch to another app.
 4. Confirm the countdown pips and the next phase tone arrive on time.
 5. Return to the browser: the countdown shows the correct phase and time.
-6. Pause, wait, resume: time continues from where it paused.
-7. Reload mid-workout: the resume dialog appears and resumes correctly.
+6. Switch away again for a few minutes, return, and confirm the next beep
+   still lands exactly when the on-screen countdown reaches zero.
+7. Pause, wait, resume: time continues from where it paused.
+8. Reload mid-workout: the resume dialog appears and resumes correctly.

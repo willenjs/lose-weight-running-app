@@ -152,14 +152,23 @@ function playCues() {
 function startTicking() {
   stopTicking();
   ticker = setInterval(tick, TICK_MS);
-  document.addEventListener('visibilitychange', tick);
+  document.addEventListener('visibilitychange', onVisibilityChange);
   tick();
 }
 
 function stopTicking() {
   clearInterval(ticker);
   ticker = null;
-  document.removeEventListener('visibilitychange', tick);
+  document.removeEventListener('visibilitychange', onVisibilityChange);
+}
+
+// Re-schedule cues on return to the foreground: the audio clock can stall
+// (context suspended, audio focus lost, output device switch) while the
+// display stays correct, so returning must re-sync audio to the timer.
+function onVisibilityChange() {
+  if (document.visibilityState !== 'visible') return;
+  tick();
+  if (app.session && app.session.pausedAt === null) playCues();
 }
 
 function tick() {
@@ -173,14 +182,14 @@ function tick() {
   }
   if (!state.paused && state.phaseIndex !== lastPhaseIndex) {
     lastPhaseIndex = state.phaseIndex;
-    announcePhase(workout.phases[state.phaseIndex]);
+    announcePhase(workout.phases[state.phaseIndex], state.phaseRemainingMs);
   }
 }
 
-function announcePhase(phase) {
+function announcePhase(phase, remainingMs) {
   const text = t('cue.phase', {
     phase: t(`phase.${phase.type}`),
-    duration: formatDuration(phase.seconds, app.lang),
+    duration: formatDuration(Math.round(remainingMs / 1000), app.lang),
   });
   speak(text, LOCALES[app.lang]);
 }

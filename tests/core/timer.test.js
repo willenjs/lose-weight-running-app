@@ -111,15 +111,23 @@ describe('formatClock', () => {
 });
 
 describe('shouldOfferResume', () => {
+  // Paused early so elapsed time stays well under the workout total; these
+  // two cases exercise only the RESUME_MAX_AGE_MS boundary, not `finished`.
   it('offers a recent session', () => {
-    expect(shouldOfferResume(fresh(), T0 + RESUME_MAX_AGE_MS - 1)).toBe(true);
+    const paused = pauseSession(fresh(), T0 + s(10));
+    expect(shouldOfferResume(paused, T0 + RESUME_MAX_AGE_MS - 1)).toBe(true);
   });
 
   it('rejects a session at or beyond the max age', () => {
-    expect(shouldOfferResume(fresh(), T0 + RESUME_MAX_AGE_MS)).toBe(false);
+    const paused = pauseSession(fresh(), T0 + s(10));
+    expect(shouldOfferResume(paused, T0 + RESUME_MAX_AGE_MS)).toBe(false);
   });
 
   it('rejects a session for a workout that is not in the plan', () => {
     expect(shouldOfferResume(startSession('w9d9', T0), T0 + 1000)).toBe(false);
+  });
+
+  it('rejects a session whose time has fully elapsed', () => {
+    expect(shouldOfferResume(fresh(), T0 + s(1260))).toBe(false);
   });
 });

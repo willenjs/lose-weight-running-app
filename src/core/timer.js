@@ -101,5 +101,8 @@ export function formatClock(ms) {
 
 /** @param {Session} session */
 export function shouldOfferResume(session, now) {
-  return findWorkout(session.workoutId) !== null && now - session.startedAt < RESUME_MAX_AGE_MS;
+  const workout = findWorkout(session.workoutId);
+  if (workout === null) return false;
+  if (now - session.startedAt >= RESUME_MAX_AGE_MS) return false;
+  return !getState(session, workout, now).finished;
 }
