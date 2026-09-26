@@ -16,7 +16,7 @@
 </script>
 
 {#if state}
-  <div class="run {phase.type}">
+  <div class="run phase-{phase.type}">
     <p class="run-label">{t('workout.title', { week: workout.week, day: workout.day })}</p>
 
     <div class="current">
