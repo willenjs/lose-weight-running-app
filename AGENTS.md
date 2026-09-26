@@ -65,3 +65,5 @@ confirm both pass.
 - Conventional commit prefixes (`feat:`, `fix:`, `docs:`, `test:`, `chore:`).
 - Remote: `origin` → `git@github.com:willenjs/lose-weight-running-app.git`,
   default branch `main`. Do not push unless asked.
+- Pushing to `main` deploys to GitHub Pages via `.github/workflows/deploy.yml`
+  (never edit the `gh-pages` branch by hand; it is overwritten on each deploy).

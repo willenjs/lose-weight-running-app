@@ -20,8 +20,10 @@ npm run build            # static site in dist/
 npm run preview          # serve the built site
 ```
 
-`dist/` can be hosted on any static host (GitHub Pages, Netlify). The build
-uses relative paths, so it works from a sub-path.
+The app is published at https://willenjs.github.io/lose-weight-running-app/ .
+Every push to `main` runs `.github/workflows/deploy.yml`, which tests, builds
+and force-pushes `dist/` to the `gh-pages` branch that GitHub Pages serves.
+The build uses relative paths, so it also works from any other static host.
 
 ## Project layout
 
