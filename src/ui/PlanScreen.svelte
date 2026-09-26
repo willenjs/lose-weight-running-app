@@ -2,6 +2,7 @@
   import { PLAN, groupByWeek, totalSeconds } from '../core/plan.js';
   import { isDone, nextWorkout } from '../core/progress.js';
   import { app, t, openWorkout, setLang } from './controller.svelte.js';
+  import ResumeDialog from './components/ResumeDialog.svelte';
 
   const weeks = groupByWeek(PLAN);
   const next = $derived(nextWorkout(PLAN, app.progress));
@@ -42,4 +43,5 @@
       </div>
     </section>
   {/each}
+  {#if app.pendingResume}<ResumeDialog />{/if}
 </div>
