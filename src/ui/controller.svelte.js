@@ -171,7 +171,7 @@ function tick() {
     finish(workout);
     return;
   }
-  if (state.phaseIndex !== lastPhaseIndex) {
+  if (!state.paused && state.phaseIndex !== lastPhaseIndex) {
     lastPhaseIndex = state.phaseIndex;
     announcePhase(workout.phases[state.phaseIndex]);
   }
