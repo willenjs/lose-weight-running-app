@@ -1,0 +1,13 @@
+{
+  "name": "Running Assistant",
+  "short_name": "Running",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#15161b",
+  "theme_color": "#15161b",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
