@@ -1,6 +1,6 @@
 import { getState, phaseBoundaries } from './timer.js';
 
-/** @typedef {'pip' | 'walk' | 'jog' | 'run' | 'finish'} CueKind */
+/** @typedef {'pip' | 'lastPip' | 'walk' | 'jog' | 'run' | 'finish'} CueKind */
 /** @typedef {{ kind: CueKind, inMs: number }} Cue */
 
 export const COUNTDOWN_PIPS = 3;
@@ -24,7 +24,7 @@ export function upcomingCues(session, workout, now) {
     cues.push({ kind: workout.phases[i].type, atMs: startMs });
     for (let k = COUNTDOWN_PIPS; k >= 1; k--) {
       const atMs = endMs - k * 1000;
-      if (atMs > startMs) cues.push({ kind: 'pip', atMs });
+      if (atMs > startMs) cues.push({ kind: k === 1 ? 'lastPip' : 'pip', atMs });
     }
   });
   cues.push({ kind: 'finish', atMs: bounds.at(-1).endMs });

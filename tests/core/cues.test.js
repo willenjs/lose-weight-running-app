@@ -16,7 +16,7 @@ describe('upcomingCues', () => {
       { kind: 'walk', inMs: 0 },
       { kind: 'pip', inMs: s(357) },
       { kind: 'pip', inMs: s(358) },
-      { kind: 'pip', inMs: s(359) },
+      { kind: 'lastPip', inMs: s(359) },
       { kind: 'jog', inMs: s(360) },
     ]);
     expect(cues.at(-1)).toEqual({ kind: 'finish', inMs: s(1260) });

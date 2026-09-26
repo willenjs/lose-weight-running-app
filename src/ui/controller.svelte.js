@@ -15,7 +15,7 @@ import { createWakeLock } from '../platform/wakeLock.js';
 // derived from timestamps and cues are pre-scheduled on the audio clock.
 const TICK_MS = 250;
 // Lets the scheduled finish melody play before audio is torn down.
-const FINISH_AUDIO_GRACE_MS = 2000;
+const FINISH_AUDIO_GRACE_MS = 3000;
 
 const storage = createStorage();
 const cuePlayer = createCuePlayer();
