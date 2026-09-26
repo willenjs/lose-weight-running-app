@@ -7,7 +7,12 @@ export function createWakeLock() {
   async function request() {
     if (!wanted || !navigator.wakeLock || document.visibilityState !== 'visible') return;
     try {
-      sentinel = await navigator.wakeLock.request('screen');
+      const lock = await navigator.wakeLock.request('screen');
+      if (!wanted) {
+        lock.release().catch(() => {});
+        return;
+      }
+      sentinel = lock;
     } catch {
       sentinel = null;
     }

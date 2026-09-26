@@ -26,7 +26,7 @@ export function createCuePlayer() {
   const AudioContextClass = globalThis.AudioContext ?? globalThis.webkitAudioContext;
   /** @type {AudioContext | null} */
   let ctx = null;
-  /** @type {OscillatorNode[]} */
+  /** @type {{ osc: OscillatorNode, gain: GainNode }[]} */
   let nodes = [];
 
   function oscillator(freq, volume) {
@@ -36,7 +36,7 @@ export function createCuePlayer() {
     osc.frequency.value = freq;
     gain.gain.value = volume;
     osc.connect(gain).connect(ctx.destination);
-    nodes.push(osc);
+    nodes.push({ osc, gain });
     return { osc, gain };
   }
 
@@ -52,13 +52,14 @@ export function createCuePlayer() {
   }
 
   function stop() {
-    for (const osc of nodes) {
+    for (const { osc, gain } of nodes) {
       try {
         osc.stop();
       } catch {
         // Already stopped.
       }
       osc.disconnect();
+      gain.disconnect();
     }
     nodes = [];
   }
@@ -68,7 +69,7 @@ export function createCuePlayer() {
     try {
       stop();
       ctx ??= new AudioContextClass();
-      if (ctx.state === 'suspended') ctx.resume();
+      if (ctx.state === 'suspended') ctx.resume().catch(() => {});
       const base = ctx.currentTime;
       for (const cue of upcomingCues(session, workout, now)) {
         for (const n of TONES[cue.kind]) note(n.freq, base + cue.inMs / 1000 + n.at, n.dur);
