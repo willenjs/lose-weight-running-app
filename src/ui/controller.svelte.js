@@ -1,13 +1,14 @@
-import { findWorkout } from '../core/plan.js';
+import { PLAN, findWorkout, totalSeconds } from '../core/plan.js';
 import {
   startSession, pauseSession, resumeSession, skipPhase, getState, shouldOfferResume,
 } from '../core/timer.js';
-import { markDone, unmark } from '../core/progress.js';
+import { markDone, unmark, programStats } from '../core/progress.js';
 import { translate, formatDuration, LANGS, DEFAULT_LANG, LOCALES } from '../i18n/index.js';
 import { createStorage } from '../platform/storage.js';
 import { createCuePlayer } from '../platform/audio.js';
-import { speak } from '../platform/speech.js';
+import { speak, cancelSpeech } from '../platform/speech.js';
 import { createWakeLock } from '../platform/wakeLock.js';
+import { share, canShare } from '../platform/share.js';
 
 /** @typedef {import('../core/timer.js').Session} Session */
 
@@ -16,10 +17,11 @@ import { createWakeLock } from '../platform/wakeLock.js';
 const TICK_MS = 250;
 // Lets the scheduled finish melody play before audio is torn down.
 const FINISH_AUDIO_GRACE_MS = 3000;
+const TOAST_MS = 2000;
 
 const storage = createStorage();
 const cuePlayer = createCuePlayer();
-const wakeLock = createWakeLock();
+const wakeLock = createWakeLock({ onChange: (active) => { app.wakeLockActive = active; } });
 
 export const app = $state({
   /** @type {'plan' | 'workout' | 'run' | 'finished'} */
@@ -34,11 +36,18 @@ export const app = $state({
   lang: DEFAULT_LANG,
   now: Date.now(),
   audioAvailable: true,
+  muted: storage.loadSettings().muted,
+  wakeLockActive: false,
+  confirmingStop: false,
+  /** @type {string | null} */
+  toast: null,
+  canShare: canShare(),
 });
 
 let ticker = null;
 let finishTimer = null;
 let lastPhaseIndex = -1;
+let toastTimer = null;
 
 export function init() {
   const savedLang = storage.loadLang();
@@ -109,10 +118,58 @@ export function skip() {
   tick();
 }
 
+export function requestStop() {
+  app.confirmingStop = true;
+}
+
+export function cancelStop() {
+  app.confirmingStop = false;
+}
+
 export function stop() {
   cuePlayer.stop();
   endRun();
   app.screen = 'workout';
+}
+
+export function toggleMute() {
+  app.muted = !app.muted;
+  storage.saveSettings({ muted: app.muted });
+  if (app.muted) cancelSpeech();
+  // Re-schedule so the change applies now; still called from the tap (a user gesture).
+  if (app.session) {
+    cuePlayer.stop();
+    if (app.session.pausedAt === null) playCues();
+  }
+}
+
+export async function shareResult() {
+  const workout = findWorkout(app.workoutId);
+  if (!workout) return;
+  const { done, total } = programStats(PLAN, app.progress);
+  const result = await share({
+    title: t('app.title'),
+    text: t('share.text', { week: workout.week, day: workout.day, done, total }),
+    url: location.origin + location.pathname,
+  });
+  if (result === 'copied') showToast(t('toast.copied'));
+}
+
+export function workoutMinutes(workout) {
+  return Math.round(totalSeconds(workout) / 60);
+}
+
+/** Compact phase list, e.g. "C7 • T2 • R5". */
+export function phaseShorthand(workout) {
+  return workout.phases
+    .map((phase) => `${t(`short.${phase.type}`)}${Math.round(phase.seconds / 60)}`)
+    .join(' • ');
+}
+
+function showToast(text) {
+  clearTimeout(toastTimer);
+  app.toast = text;
+  toastTimer = setTimeout(() => { app.toast = null; }, TOAST_MS);
 }
 
 function applyLang(lang) {
@@ -146,7 +203,9 @@ function beginRun(session) {
 }
 
 function playCues() {
-  app.audioAvailable = cuePlayer.start($state.snapshot(app.session), currentWorkout(), Date.now());
+  app.audioAvailable = cuePlayer.start(
+    $state.snapshot(app.session), currentWorkout(), Date.now(), { muted: app.muted },
+  );
 }
 
 function startTicking() {
@@ -187,6 +246,7 @@ function tick() {
 }
 
 function announcePhase(phase, remainingMs) {
+  if (app.muted) return;
   const text = t('cue.phase', {
     phase: t(`phase.${phase.type}`),
     duration: formatDuration(Math.round(remainingMs / 1000), app.lang),
@@ -198,11 +258,12 @@ function finish(workout) {
   saveProgress(markDone(app.progress, workout.id, new Date().toISOString()));
   endRun();
   app.screen = 'finished';
-  speak(t('cue.finish'), LOCALES[app.lang]);
+  if (!app.muted) speak(t('cue.finish'), LOCALES[app.lang]);
   finishTimer = setTimeout(() => cuePlayer.stop(), FINISH_AUDIO_GRACE_MS);
 }
 
 function endRun() {
+  app.confirmingStop = false;
   stopTicking();
   wakeLock.release();
   storage.clearSession();

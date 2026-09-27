@@ -80,15 +80,18 @@ export function createCuePlayer() {
     nodes = [];
   }
 
-  function start(session, workout, now) {
+  /** @param {{ muted?: boolean }} [options] muted: keep the tab alive but schedule no tones. */
+  function start(session, workout, now, { muted = false } = {}) {
     if (!AudioContextClass) return false;
     try {
       stop();
       ctx ??= new AudioContextClass();
       if (ctx.state === 'suspended') ctx.resume().catch(() => {});
       const base = ctx.currentTime;
-      for (const cue of upcomingCues(session, workout, now)) {
-        for (const n of TONES[cue.kind]) note(n.freq, base + cue.inMs / 1000 + n.at, n.dur);
+      if (!muted) {
+        for (const cue of upcomingCues(session, workout, now)) {
+          for (const n of TONES[cue.kind]) note(n.freq, base + cue.inMs / 1000 + n.at, n.dur);
+        }
       }
       oscillator(KEEP_ALIVE_FREQ, KEEP_ALIVE_VOLUME).osc.start(base);
       return true;

@@ -14,3 +14,8 @@ export function speak(text, locale) {
   utterance.rate = SPEECH_RATE;
   synth.speak(utterance);
 }
+
+/** Stops any speech in progress (used when muting). */
+export function cancelSpeech() {
+  globalThis.speechSynthesis?.cancel();
+}

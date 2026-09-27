@@ -1,11 +1,14 @@
-/** Keeps the screen on while wanted; the browser drops the lock when the tab is hidden. */
-export function createWakeLock() {
+/**
+ * Keeps the screen on while wanted; the browser drops the lock when the tab is hidden.
+ * @param {{ onChange?: (active: boolean) => void }} [options]
+ */
+export function createWakeLock({ onChange = () => {} } = {}) {
   let wanted = false;
   /** @type {WakeLockSentinel | null} */
   let sentinel = null;
 
   async function request() {
-    if (!wanted || !navigator.wakeLock || document.visibilityState !== 'visible') return;
+    if (!wanted || sentinel || !navigator.wakeLock || document.visibilityState !== 'visible') return;
     try {
       const lock = await navigator.wakeLock.request('screen');
       if (!wanted) {
@@ -13,6 +16,13 @@ export function createWakeLock() {
         return;
       }
       sentinel = lock;
+      // Fires when the browser drops the lock (tab hidden) or we release it.
+      lock.addEventListener('release', () => {
+        if (sentinel !== lock) return;
+        sentinel = null;
+        onChange(false);
+      });
+      onChange(true);
     } catch {
       sentinel = null;
     }
@@ -31,8 +41,12 @@ export function createWakeLock() {
     release() {
       wanted = false;
       document.removeEventListener('visibilitychange', onVisibilityChange);
-      sentinel?.release().catch(() => {});
+      const lock = sentinel;
       sentinel = null;
+      if (lock) {
+        lock.release().catch(() => {});
+        onChange(false);
+      }
     },
   };
 }

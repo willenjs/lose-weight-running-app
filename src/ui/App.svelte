@@ -16,4 +16,5 @@
   {:else}
     <PlanScreen />
   {/if}
+  {#if app.toast}<div class="toast" role="status">{app.toast}</div>{/if}
 </main>
