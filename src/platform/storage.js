@@ -6,6 +6,7 @@ export const STORAGE_KEYS = {
   progress: 'runningAssistant.progress',
   session: 'runningAssistant.session',
   lang: 'runningAssistant.lang',
+  settings: 'runningAssistant.settings',
 };
 
 function defaultBackend() {
@@ -28,6 +29,8 @@ const isSession = (value) =>
   (value.pausedAt === null || typeof value.pausedAt === 'number') &&
   typeof value.pausedTotalMs === 'number' &&
   typeof value.skippedMs === 'number';
+
+const isSettings = (value) => isObject(value) && typeof value.muted === 'boolean';
 
 /** @param {Pick<Storage, 'getItem' | 'setItem' | 'removeItem'> | null} [backend] */
 export function createStorage(backend = defaultBackend()) {
@@ -67,5 +70,7 @@ export function createStorage(backend = defaultBackend()) {
     clearSession: () => remove(STORAGE_KEYS.session),
     loadLang: () => read(STORAGE_KEYS.lang, (value) => typeof value === 'string', null),
     saveLang: (lang) => write(STORAGE_KEYS.lang, lang),
+    loadSettings: () => read(STORAGE_KEYS.settings, isSettings, { muted: false }),
+    saveSettings: (settings) => write(STORAGE_KEYS.settings, settings),
   };
 }

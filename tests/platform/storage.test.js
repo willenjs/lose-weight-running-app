@@ -27,6 +27,7 @@ describe('createStorage', () => {
       progress: 'runningAssistant.progress',
       session: 'runningAssistant.session',
       lang: 'runningAssistant.lang',
+      settings: 'runningAssistant.settings',
     });
     expect(JSON.parse(backend.data.get('runningAssistant.lang'))).toEqual({ version: 1, data: 'en' });
   });
@@ -79,5 +80,29 @@ describe('createStorage', () => {
     expect(() => storage.clearSession()).not.toThrow();
     expect(storage.loadProgress()).toEqual({ completed: {} });
     expect(storage.loadLang()).toBeNull();
+  });
+
+  it('round-trips settings in a version envelope', () => {
+    const backend = fakeBackend();
+    const storage = createStorage(backend);
+    storage.saveSettings({ muted: true });
+    expect(storage.loadSettings()).toEqual({ muted: true });
+    expect(JSON.parse(backend.data.get('runningAssistant.settings'))).toEqual({ version: 1, data: { muted: true } });
+  });
+
+  it('defaults settings to unmuted when missing, stale or malformed', () => {
+    expect(createStorage(fakeBackend()).loadSettings()).toEqual({ muted: false });
+    expect(createStorage(fakeBackend({
+      [STORAGE_KEYS.settings]: JSON.stringify({ version: 99, data: { muted: true } }),
+    })).loadSettings()).toEqual({ muted: false });
+    expect(createStorage(fakeBackend({
+      [STORAGE_KEYS.settings]: JSON.stringify({ version: 1, data: { muted: 'yes' } }),
+    })).loadSettings()).toEqual({ muted: false });
+  });
+
+  it('never throws on settings with a broken backend', () => {
+    const storage = createStorage(throwingBackend);
+    expect(() => storage.saveSettings({ muted: true })).not.toThrow();
+    expect(storage.loadSettings()).toEqual({ muted: false });
   });
 });
