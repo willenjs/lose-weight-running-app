@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { PLAN } from '../../src/core/plan.js';
-import { emptyProgress, isDone, nextWorkout, markDone, unmark } from '../../src/core/progress.js';
+import { emptyProgress, isDone, nextWorkout, markDone, unmark, programStats } from '../../src/core/progress.js';
 
 describe('progress', () => {
   it('starts empty and suggests the first workout', () => {
@@ -37,5 +37,34 @@ describe('progress', () => {
 
   it('does not treat inherited object keys as done', () => {
     expect(isDone(emptyProgress(), 'toString')).toBe(false);
+  });
+});
+
+describe('programStats', () => {
+  const at = '2026-09-26T10:00:00.000Z';
+  const doneIds = (...ids) => ids.reduce((p, id) => markDone(p, id, at), emptyProgress());
+
+  it('starts at zero in week 1', () => {
+    expect(programStats(PLAN, emptyProgress())).toEqual({
+      done: 0, total: 15, percent: 0, doneMinutes: 0, currentWeek: 1,
+    });
+  });
+
+  it('counts done workouts, minutes and the week of the next workout', () => {
+    // 21 + 23 + 23 + 21 minutes.
+    expect(programStats(PLAN, doneIds('w1d1', 'w1d2', 'w1d3', 'w2d1'))).toEqual({
+      done: 4, total: 15, percent: 27, doneMinutes: 88, currentWeek: 2,
+    });
+  });
+
+  it('reports the last week when everything is done', () => {
+    const all = doneIds(...PLAN.map((w) => w.id));
+    expect(programStats(PLAN, all)).toEqual({
+      done: 15, total: 15, percent: 100, doneMinutes: 391, currentWeek: 5,
+    });
+  });
+
+  it('ignores stored ids that are not in the plan', () => {
+    expect(programStats(PLAN, doneIds('w1d1', 'w9d9'))).toMatchObject({ done: 1, percent: 7, doneMinutes: 21 });
   });
 });

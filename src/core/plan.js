@@ -54,3 +54,20 @@ export function groupByWeek(plan) {
   }
   return weeks;
 }
+
+/** @param {Workout} workout @returns {Record<PhaseType, number>} seconds per phase type */
+export function phaseSeconds(workout) {
+  const totals = { walk: 0, jog: 0, run: 0 };
+  for (const phase of workout.phases) totals[phase.type] += phase.seconds;
+  return totals;
+}
+
+/** @typedef {'warmup' | 'build' | 'recovery' | 'finale'} PhaseRole */
+
+/** What a phase is for, used for labels and tips. @param {Workout} workout @returns {PhaseRole} */
+export function phaseRole(workout, index) {
+  const phase = workout.phases[index];
+  if (index === 0) return 'warmup';
+  if (index === workout.phases.length - 1 && phase.type === 'run') return 'finale';
+  return phase.type === 'walk' ? 'recovery' : 'build';
+}

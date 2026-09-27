@@ -1,5 +1,6 @@
 /** @typedef {import('./plan.js').Workout} Workout */
 /** @typedef {{ completed: Record<string, string> }} Progress */
+import { totalSeconds } from './plan.js';
 
 /** @returns {Progress} */
 export function emptyProgress() {
@@ -25,4 +26,22 @@ export function markDone(progress, workoutId, isoDate) {
 export function unmark(progress, workoutId) {
   const { [workoutId]: _removed, ...rest } = progress.completed;
   return { ...progress, completed: rest };
+}
+
+/**
+ * @param {Workout[]} plan @param {Progress} progress
+ * @returns {{ done: number, total: number, percent: number, doneMinutes: number, currentWeek: number }}
+ */
+export function programStats(plan, progress) {
+  const doneWorkouts = plan.filter((w) => isDone(progress, w.id));
+  const done = doneWorkouts.length;
+  const total = plan.length;
+  const doneSeconds = doneWorkouts.reduce((sum, w) => sum + totalSeconds(w), 0);
+  return {
+    done,
+    total,
+    percent: total === 0 ? 0 : Math.round((done / total) * 100),
+    doneMinutes: Math.round(doneSeconds / 60),
+    currentWeek: nextWorkout(plan, progress)?.week ?? plan.at(-1)?.week ?? 1,
+  };
 }

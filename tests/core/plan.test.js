@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { PLAN, findWorkout, totalSeconds, groupByWeek } from '../../src/core/plan.js';
+import { PLAN, findWorkout, totalSeconds, groupByWeek, phaseSeconds, phaseRole } from '../../src/core/plan.js';
 
 // Totals (in minutes) exactly as printed on each screenshot in image-sources/.
 const SCREENSHOT_TOTALS = {
@@ -54,5 +54,35 @@ describe('groupByWeek', () => {
     expect(weeks.map((w) => w.week)).toEqual([1, 2, 3, 4, 5]);
     expect(weeks.every((w) => w.workouts.length === 3)).toBe(true);
     expect(weeks[1].workouts.map((w) => w.id)).toEqual(['w2d1', 'w2d2', 'w2d3']);
+  });
+});
+
+describe('phaseSeconds', () => {
+  it('sums seconds per phase type', () => {
+    expect(phaseSeconds(findWorkout('w2d2'))).toEqual({ walk: 840, jog: 240, run: 300 });
+    expect(phaseSeconds(findWorkout('w4d2'))).toEqual({ walk: 900, jog: 360, run: 300 });
+  });
+
+  it('adds up to the workout total', () => {
+    for (const workout of PLAN) {
+      const { walk, jog, run } = phaseSeconds(workout);
+      expect(walk + jog + run, workout.id).toBe(totalSeconds(workout));
+    }
+  });
+});
+
+describe('phaseRole', () => {
+  it('labels warm-up, build, recovery and finale', () => {
+    const workout = findWorkout('w4d2'); // W J W J W J R
+    expect(workout.phases.map((_, i) => phaseRole(workout, i))).toEqual([
+      'warmup', 'build', 'recovery', 'build', 'recovery', 'build', 'finale',
+    ]);
+  });
+
+  it('treats a run that is not last as build', () => {
+    const workout = { id: 'x', week: 1, day: 1, phases: [
+      { type: 'walk', seconds: 60 }, { type: 'run', seconds: 60 }, { type: 'walk', seconds: 60 },
+    ] };
+    expect(workout.phases.map((_, i) => phaseRole(workout, i))).toEqual(['warmup', 'build', 'recovery']);
   });
 });
