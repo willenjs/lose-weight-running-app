@@ -49,3 +49,28 @@ describe('formatDuration', () => {
     expect(formatDuration(90, 'pt')).toBe('1 minuto e 30 segundos');
   });
 });
+
+describe('PulseRun copy', () => {
+  it('names the app PulseRun', () => {
+    for (const lang of LANGS) expect(translate(lang, 'app.title')).toBe('PulseRun');
+  });
+
+  it('has a theme and subtitle for each of the 5 weeks', () => {
+    for (const lang of LANGS) {
+      for (let week = 1; week <= 5; week += 1) {
+        for (const part of ['title', 'subtitle']) {
+          const key = `week.${week}.${part}`;
+          expect(translate(lang, key), `${lang} ${key}`).not.toBe(key);
+        }
+      }
+    }
+  });
+
+  it('has a label for every phase role, tip and pace', () => {
+    const keys = [
+      ...['warmup', 'build', 'recovery', 'finale'].flatMap((r) => [`role.${r}`, `tip.${r}`]),
+      ...['walk', 'jog', 'run'].flatMap((p) => [`pace.${p}`, `short.${p}`]),
+    ];
+    for (const lang of LANGS) for (const key of keys) expect(translate(lang, key), `${lang} ${key}`).not.toBe(key);
+  });
+});
