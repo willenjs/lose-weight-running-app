@@ -50,6 +50,22 @@ describe('formatDuration', () => {
   });
 });
 
+describe('phase labels', () => {
+  it('shows RUN RUN RUN! on screen while the voice keeps the plain phase name', () => {
+    for (const lang of LANGS) expect(translate(lang, 'phaseLabel.run')).toBe('RUN RUN RUN!');
+    expect(translate('pt', 'phase.run')).toBe('Correr');
+    expect(translate('en', 'phase.run')).toBe('Run');
+  });
+
+  it('keeps walk and jog labels equal to their phase names', () => {
+    for (const lang of LANGS) {
+      for (const type of ['walk', 'jog']) {
+        expect(translate(lang, `phaseLabel.${type}`)).toBe(translate(lang, `phase.${type}`));
+      }
+    }
+  });
+});
+
 describe('PulseRun copy', () => {
   it('names the app PulseRun', () => {
     for (const lang of LANGS) expect(translate(lang, 'app.title')).toBe('PulseRun');

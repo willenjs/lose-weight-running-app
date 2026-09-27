@@ -34,7 +34,7 @@
   <div class="totals">
     {#each TYPES as type (type)}
       <StatTile
-        label={t(`phase.${type}`)}
+        label={t(`phaseLabel.${type}`)}
         value={Math.round(totals[type] / 60)}
         unit={t('unit.min')}
         caption={t('workout.ofVolume', { percent: Math.round((totals[type] / total) * 100) })}
@@ -59,7 +59,7 @@
         <span class="phase-badge"><Icon name={phase.type} size={26} /></span>
         <div class="phase-text">
           <p class="phase-label">{t('workout.phaseLabel', { n: i + 1, role: t(`role.${role}`) })}</p>
-          <p class="phase-name">{t(`phase.${phase.type}`)}</p>
+          <p class="phase-name">{t(`phaseLabel.${phase.type}`)}</p>
           <p class="phase-tip">{t(`tip.${role}`)}</p>
         </div>
         <div class="phase-side">

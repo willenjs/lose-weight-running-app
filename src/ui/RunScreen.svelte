@@ -39,13 +39,13 @@
     <section class="card main" class:paused={state.paused}>
       <div class="phase-head">
         <span class="phase-badge"><Icon name={phase.type} size={30} /></span>
-        <h1 class="phase-title">{t(`phase.${phase.type}`)}</h1>
+        <h1 class="phase-title">{t(`phaseLabel.${phase.type}`)}</h1>
       </div>
       <p class="countdown num">{formatClock(state.phaseRemainingMs)}</p>
       {#if state.paused}<p class="paused-label">{t('run.paused')}</p>{/if}
       <p class="next">
         {nextPhase
-          ? t('run.next', { phase: t(`phase.${nextPhase.type}`), time: formatClock(nextPhase.seconds * 1000) })
+          ? t('run.next', { phase: t(`phaseLabel.${nextPhase.type}`), time: formatClock(nextPhase.seconds * 1000) })
           : t('run.last')}
       </p>
     </section>
@@ -105,7 +105,7 @@
   }
   .phase-head { display: flex; align-items: center; gap: 12px; }
   .phase-badge { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 12px; background: color-mix(in srgb, var(--phase) 18%, transparent); color: var(--phase); }
-  .phase-title { margin: 0; font-family: var(--display-font); font-size: 34px; font-weight: 700; text-transform: uppercase; color: var(--phase); }
+  .phase-title { margin: 0; font-family: var(--display-font); font-size: clamp(26px, 8vw, 34px); white-space: nowrap; font-weight: 700; text-transform: uppercase; color: var(--phase); }
   .countdown { margin: 0; font-size: clamp(64px, 24vw, 96px); font-weight: 700; line-height: 1; letter-spacing: -0.03em; }
   .main.paused .countdown { opacity: 0.5; }
   .paused-label { margin: 0; font-family: var(--display-font); font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--jog); }
