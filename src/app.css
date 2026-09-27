@@ -167,31 +167,6 @@ button { font: inherit; color: inherit; cursor: pointer; border: none; backgroun
 .danger { color: var(--danger); }
 
 /* Workout */
-.back {
-  align-self: flex-start;
-  background: #3a3b42;
-  color: var(--text);
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  font-size: 1.4rem;
-  line-height: 1;
-}
-.title { text-align: center; font-size: 2rem; margin-top: 24px; }
-.subtitle { text-align: center; font-size: 1.6rem; margin-top: 12px; }
-.total { text-align: center; font-weight: 600; margin: 16px 0 24px; }
-.phases { list-style: none; padding: 0 8px; margin: 0 0 24px; }
-.phases li {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 18px 0;
-  border-bottom: 1px solid var(--separator);
-  font-size: 1.5rem;
-}
-.phases li:last-child { border-bottom: none; }
-.phase-name { flex: 1; text-transform: uppercase; }
-.phase-time { font-variant-numeric: tabular-nums; }
 .done-note { text-align: center; color: var(--muted); margin: 0 0 16px; }
 .bottom { margin-top: auto; }
 
