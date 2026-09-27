@@ -1,28 +1,50 @@
 :root {
-  --bg: #15161b;
-  --surface: #23242b;
+  --surface-0: #0c0d12;
+  --surface-1: #14161f;
+  --surface-2: #1c1f2b;
+  --surface-3: #25293a;
   --text: #ffffff;
-  --muted: #a3a6ad;
-  --accent: #7fd6a4;
-  --primary: #16c07c;
-  --separator: #34353c;
-  --danger: #ff6b6b;
-  --walk: #2b5f9e;
-  --jog: #b7791f;
-  --run: #c0392b;
-  --heading-font: 'Oswald', system-ui, sans-serif;
+  --text-muted: #8a91a8;
+  --mint: #10f49c;
+  --on-mint: #002111;
+  --mint-soft: rgb(16 244 156 / 0.12);
+  --mint-glow: rgb(16 244 156 / 0.25);
+  --walk: #00d2ff;
+  --jog: #ffab00;
+  --run: #ff334b;
+  --radius: 16px;
+  --radius-sm: 4px;
+  --margin: 20px;
+  --gap: 16px;
+  --pad: 24px;
+  --display-font: 'Space Grotesk', system-ui, sans-serif;
   --body-font: 'Inter', system-ui, sans-serif;
   color-scheme: dark;
+
+  /* Legacy aliases for the old screens; removed in Task 10. */
+  --bg: var(--surface-0);
+  --surface: var(--surface-1);
+  --muted: var(--text-muted);
+  --accent: var(--mint);
+  --primary: var(--mint);
+  --separator: var(--surface-3);
+  --danger: var(--run);
+  --heading-font: var(--display-font);
 }
+
+.phase-walk { --phase: var(--walk); }
+.phase-jog { --phase: var(--jog); }
+.phase-run { --phase: var(--run); }
 
 * { box-sizing: border-box; }
 
 html, body {
   margin: 0;
-  background: var(--bg);
+  background: var(--surface-0);
   color: var(--text);
   font-family: var(--body-font);
   -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
 }
 
 .app {
@@ -37,37 +59,110 @@ html, body {
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
+  gap: var(--gap);
+  padding: 0 var(--margin) calc(var(--margin) + env(safe-area-inset-bottom));
 }
 
-h1, h2 {
-  font-family: var(--heading-font);
-  font-weight: 600;
-  color: var(--accent);
+button { font: inherit; color: inherit; cursor: pointer; border: none; background: none; padding: 0; }
+
+.num { font-family: var(--display-font); font-variant-numeric: tabular-nums; }
+
+.label {
   margin: 0;
+  font-family: var(--display-font);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
 }
 
-button { font: inherit; cursor: pointer; border: none; }
+.card {
+  background: var(--surface-1);
+  border: 1px solid var(--surface-2);
+  border-radius: var(--radius);
+  padding: 20px;
+}
 
-.primary {
-  background: var(--primary);
-  color: var(--text);
-  font-weight: 600;
-  font-size: 1.1rem;
-  padding: 18px;
-  border-radius: 12px;
+.btn {
+  min-height: 60px;
   width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 0 16px;
+  border-radius: var(--radius);
+  font-family: var(--display-font);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
 }
+.btn-primary { background: var(--mint); color: var(--on-mint); box-shadow: 0 0 24px -4px var(--mint-glow); }
+.btn-primary:active { background: var(--surface-0); color: var(--mint); box-shadow: inset 0 0 0 2px var(--mint); }
+.btn-secondary { background: var(--surface-1); color: var(--text); box-shadow: inset 0 0 0 1.5px var(--surface-3); }
+.btn-secondary:active { background: var(--text); color: var(--surface-0); }
+.btn-link { align-self: center; padding: 12px; font-size: 14px; color: var(--text-muted); text-decoration: underline; }
 
-.secondary {
-  background: var(--surface);
-  color: var(--text);
-  font-size: 1rem;
-  padding: 14px;
-  border-radius: 12px;
+.chip, .tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-family: var(--display-font);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.chip { background: var(--surface-2); color: var(--text-muted); }
+.tag { background: var(--mint-soft); color: var(--mint); }
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--margin);
+  background: rgb(12 13 18 / 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+.dialog {
   width: 100%;
+  max-width: 400px;
+  display: grid;
+  gap: var(--gap);
+  padding: var(--pad);
+  background: var(--surface-2);
+  border: 1px solid var(--surface-3);
+  border-radius: var(--radius);
+}
+.dialog h2 { margin: 0; font-family: var(--display-font); font-size: 22px; color: var(--text); }
+.dialog p { margin: 0; color: var(--text-muted); }
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(96px + env(safe-area-inset-bottom));
+  z-index: 20;
+  transform: translateX(-50%);
+  padding: 10px 18px;
+  border-radius: 9999px;
+  background: var(--surface-2);
+  border: 1px solid var(--mint);
+  color: var(--mint);
+  font-family: var(--display-font);
+  font-weight: 700;
 }
 
+/* ---------- Legacy screen styles, deleted in Task 10 ---------- */
+.primary { background: var(--primary); color: var(--on-mint); font-weight: 600; font-size: 1.1rem; padding: 18px; border-radius: 12px; width: 100%; }
+.secondary { background: var(--surface); color: var(--text); font-size: 1rem; padding: 14px; border-radius: 12px; width: 100%; }
 .link { background: none; color: var(--accent); text-decoration: underline; padding: 0; }
 .danger { color: var(--danger); }
 
@@ -167,24 +262,3 @@ button { font: inherit; cursor: pointer; border: none; }
 /* Finished */
 .finished { justify-content: center; align-items: center; text-align: center; gap: 16px; }
 .trophy { font-size: 4rem; }
-
-/* Resume dialog */
-.overlay {
-  position: fixed;
-  inset: 0;
-  background: rgb(0 0 0 / 0.6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 16px;
-}
-.dialog {
-  width: 100%;
-  max-width: 400px;
-  background: var(--surface);
-  border-radius: 16px;
-  padding: 24px;
-  display: grid;
-  gap: 12px;
-}
-.dialog p { margin: 0 0 8px; }

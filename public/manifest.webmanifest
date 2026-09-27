@@ -1,12 +1,12 @@
 {
-  "name": "Running Assistant",
-  "short_name": "Running",
+  "name": "PulseRun",
+  "short_name": "PulseRun",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#15161b",
-  "theme_color": "#15161b",
+  "background_color": "#0C0D12",
+  "theme_color": "#0C0D12",
   "icons": [
     { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
   ]
