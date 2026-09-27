@@ -2,7 +2,6 @@ export default {
   'app.title': 'PulseRun',
   'app.subtitle': 'Plano 5 Semanas',
   'lang.label': 'Idioma',
-  'lang.switch': 'EN', // legacy
   'header.mute': 'Silenciar áudio',
   'header.unmute': 'Ativar áudio',
   'common.weekDay': 'Semana {week} • Dia {day}',
@@ -19,7 +18,6 @@ export default {
   'week.4.subtitle': 'Mais intervalos e trotes de 3 minutos',
   'week.5.title': 'Consolidação',
   'week.5.subtitle': 'Juntando tudo para fechar o programa',
-  'plan.continue': 'Continuar: Semana {week} - Dia {day}', // legacy
   'plan.allDone': 'Programa concluído! 🎉',
   'plan.progressLabel': 'Progresso geral',
   'plan.workoutsDone': 'Treinos feitos',
@@ -75,7 +73,6 @@ export default {
   'run.phaseOf': 'Fase {n} de {total}',
   'run.next': 'Próximo: {phase} {time}',
   'run.last': 'Última fase',
-  'run.remaining': 'Restante: {time}', // legacy
   'run.remainingTotal': 'Restante total',
   'run.phasesDone': 'Fases concluídas',
   'run.voiceOn': 'Bips + voz',
@@ -86,7 +83,6 @@ export default {
   'run.resume': 'Continuar',
   'run.skip': 'Pular',
   'run.stop': 'Parar',
-  'run.stopConfirm': 'Parar o treino? Ele não será marcado como concluído.', // legacy
   'run.stopTitle': 'Parar o treino?',
   'run.stopBody': 'Ele não será marcado como concluído.',
   'run.stopKeep': 'Continuar treinando',

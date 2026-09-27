@@ -2,7 +2,6 @@ export default {
   'app.title': 'PulseRun',
   'app.subtitle': '5-Week Plan',
   'lang.label': 'Language',
-  'lang.switch': 'PT', // legacy
   'header.mute': 'Mute audio',
   'header.unmute': 'Unmute audio',
   'common.weekDay': 'Week {week} • Day {day}',
@@ -19,7 +18,6 @@ export default {
   'week.4.subtitle': 'More intervals and 3-minute jogs',
   'week.5.title': 'Consolidation',
   'week.5.subtitle': 'Putting it all together to finish',
-  'plan.continue': 'Continue: Week {week} - Day {day}', // legacy
   'plan.allDone': 'Program complete! 🎉',
   'plan.progressLabel': 'Overall progress',
   'plan.workoutsDone': 'Workouts done',
@@ -75,7 +73,6 @@ export default {
   'run.phaseOf': 'Phase {n} of {total}',
   'run.next': 'Next: {phase} {time}',
   'run.last': 'Last phase',
-  'run.remaining': 'Remaining: {time}', // legacy
   'run.remainingTotal': 'Total remaining',
   'run.phasesDone': 'Phases done',
   'run.voiceOn': 'Beeps + voice',
@@ -86,7 +83,6 @@ export default {
   'run.resume': 'Resume',
   'run.skip': 'Skip',
   'run.stop': 'Stop',
-  'run.stopConfirm': 'Stop the workout? It will not be marked as completed.', // legacy
   'run.stopTitle': 'Stop the workout?',
   'run.stopBody': 'It will not be marked as completed.',
   'run.stopKeep': 'Keep going',

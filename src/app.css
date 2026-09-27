@@ -20,16 +20,6 @@
   --display-font: 'Space Grotesk', system-ui, sans-serif;
   --body-font: 'Inter', system-ui, sans-serif;
   color-scheme: dark;
-
-  /* Legacy aliases for the old screens; removed in Task 10. */
-  --bg: var(--surface-0);
-  --surface: var(--surface-1);
-  --muted: var(--text-muted);
-  --accent: var(--mint);
-  --primary: var(--mint);
-  --separator: var(--surface-3);
-  --danger: var(--run);
-  --heading-font: var(--display-font);
 }
 
 .phase-walk { --phase: var(--walk); }
@@ -159,20 +149,3 @@ button { font: inherit; color: inherit; cursor: pointer; border: none; backgroun
   font-family: var(--display-font);
   font-weight: 700;
 }
-
-/* ---------- Legacy screen styles, deleted in Task 10 ---------- */
-.primary { background: var(--primary); color: var(--on-mint); font-weight: 600; font-size: 1.1rem; padding: 18px; border-radius: 12px; width: 100%; }
-.secondary { background: var(--surface); color: var(--text); font-size: 1rem; padding: 14px; border-radius: 12px; width: 100%; }
-.link { background: none; color: var(--accent); text-decoration: underline; padding: 0; }
-.danger { color: var(--danger); }
-
-/* Workout */
-.done-note { text-align: center; color: var(--muted); margin: 0 0 16px; }
-.bottom { margin-top: auto; }
-
-.phase-icon { width: 1.5em; text-align: center; }
-.phase-icon.big { font-size: 3rem; width: auto; }
-
-/* Finished */
-.finished { justify-content: center; align-items: center; text-align: center; gap: 16px; }
-.trophy { font-size: 4rem; }
