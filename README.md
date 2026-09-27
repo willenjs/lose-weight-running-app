@@ -1,4 +1,4 @@
-# Running Assistant
+# PulseRun
 
 A mobile-friendly interval timer and progress tracker for a 5-week walk/jog/run
 program ("Correndo para a perda de peso"). Frontend only: no backend, no login;
@@ -28,7 +28,7 @@ The build uses relative paths, so it also works from any other static host.
 ## Project layout
 
 - `src/core/` — plan data, timer, cue schedule, progress. Pure JavaScript, no browser APIs.
-- `src/platform/` — browser adapters: Web Audio, speech, wake lock, localStorage.
+- `src/platform/` — browser adapters: Web Audio, speech, wake lock, localStorage, Web Share/clipboard.
 - `src/i18n/` — text resources (`pt.js` default, `en.js`).
 - `src/ui/` — Svelte 5 screens; `controller.svelte.js` holds app state and actions.
 - `image-sources/` — screenshots the workout plan was transcribed from.

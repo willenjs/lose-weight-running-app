@@ -67,7 +67,7 @@
             <strong>{t('common.weekDay', { week: next.week, day: next.day })}</strong>
             <span class="num">{t('workout.total', { value: workoutMinutes(next) })} • {phaseShorthand(next)}</span>
           </span>
-          <Icon name="chevron" size={20} />
+          <span class="next-chevron"><Icon name="chevron" size={20} /></span>
         </button>
       {:else}
         <p class="all-done">{t('plan.allDone')}</p>
@@ -126,6 +126,8 @@
   .bar-fill { height: 100%; background: var(--mint); border-radius: 9999px; }
   .next-step { display: flex; flex-direction: column; gap: 10px; }
   .next-card { display: flex; align-items: center; gap: 12px; min-height: 60px; text-align: left; }
+  .next-card:active { background: var(--surface-2); }
+  .next-chevron { flex: none; display: grid; transform: rotate(-90deg); }
   .next-icon { flex: none; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 12px; background: var(--surface-2); color: var(--walk); }
   .next-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
   .next-text strong { font-family: var(--display-font); font-size: 18px; }

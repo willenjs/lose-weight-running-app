@@ -66,6 +66,7 @@
   .week { background: var(--surface-1); border: 1px solid var(--surface-2); border-radius: var(--radius); overflow: hidden; }
   .week.current { border-color: var(--mint); box-shadow: 0 0 24px -4px var(--mint-glow); }
   .week-head { width: 100%; min-height: 72px; display: flex; align-items: center; gap: 12px; padding: 12px 16px; text-align: left; }
+  .week-head:active { background: var(--surface-2); }
   .badge {
     flex: none;
     width: 40px;
@@ -81,9 +82,17 @@
   .badge.done { background: var(--mint-soft); color: var(--mint); }
   .badge.current { background: var(--mint); color: var(--on-mint); }
   .week-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-  .week-title, .week-sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .week-title { font-family: var(--display-font); font-size: 17px; font-weight: 700; }
-  .week-sub { font-size: 13px; color: var(--text-muted); }
+  .week-title {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    white-space: normal;
+    font-family: var(--display-font);
+    font-size: 17px;
+    font-weight: 700;
+  }
+  .week-sub { white-space: normal; font-size: 13px; color: var(--text-muted); }
   .week-sub.live { color: var(--mint); font-weight: 600; }
   .count { flex: none; font-size: 13px; color: var(--text-muted); }
   .chevron { flex: none; display: grid; color: var(--text-muted); transition: transform 0.2s; }
@@ -101,6 +110,7 @@
     text-align: left;
   }
   .day.next { box-shadow: inset 0 0 0 1px var(--mint); }
+  .day:active { background: var(--surface-3); }
   .status { flex: none; display: grid; color: var(--text-muted); }
   .status.done, .status.next { color: var(--mint); }
   .day-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }

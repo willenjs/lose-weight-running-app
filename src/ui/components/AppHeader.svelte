@@ -10,8 +10,9 @@
 <header class="app-header">
   {#if onback}
     <button class="icon-btn" onclick={onback} aria-label={t('workout.back')}><Icon name="back" /></button>
+  {:else}
+    <span class="logo"><Icon name="run" size={28} /></span>
   {/if}
-  <span class="logo"><Icon name="run" size={28} /></span>
   <div class="brand">
     <strong>{t('app.title')}</strong>
     <span>{subtitle}</span>
