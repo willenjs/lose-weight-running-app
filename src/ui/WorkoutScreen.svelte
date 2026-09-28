@@ -2,7 +2,7 @@
   import { findWorkout, totalSeconds, phaseSeconds, phaseRole } from '../core/plan.js';
   import { formatClock } from '../core/timer.js';
   import {
-    app, t, formatDate, goToPlan, startWorkout, unmarkWorkout, workoutMinutes, audioMuted,
+    app, t, formatDate, goToPlan, startWorkout, unmarkWorkout, workoutMinutes, cuesSentence,
   } from './controller.svelte.js';
   import AppHeader from './components/AppHeader.svelte';
   import Icon from './components/Icon.svelte';
@@ -15,6 +15,7 @@
   const workout = $derived(findWorkout(app.workoutId));
   const completedAt = $derived(app.progress.completed[app.workoutId]);
   const totals = $derived(phaseSeconds(workout));
+  const audioNote = $derived(cuesSentence());
   const total = $derived(totalSeconds(workout));
   const weekDay = $derived(t('common.weekDay', { week: workout.week, day: workout.day }));
 </script>
@@ -78,9 +79,9 @@
     </div>
   </section>
 
-  <section class="card note" class:off={audioMuted()}>
-    <span class="note-icon"><Icon name={audioMuted() ? 'speaker-off' : 'speaker'} size={20} /></span>
-    <p>{t(audioMuted() ? 'workout.voiceOff' : 'workout.voiceOn')}</p>
+  <section class="card note" class:off={!audioNote}>
+    <span class="note-icon"><Icon name={audioNote ? 'speaker' : 'speaker-off'} size={20} /></span>
+    <p>{audioNote ?? t('workout.voiceOff')}</p>
   </section>
 
   {#if completedAt}

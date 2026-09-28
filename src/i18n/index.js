@@ -34,3 +34,8 @@ export function formatDuration(seconds, lang) {
   if (rest > 0 || whole === 0) parts.push(unit(rest, 'second'));
   return parts.join(translate(lang, 'unit.and'));
 }
+
+/** "a, b and c" with the conjunction and commas of the language. */
+export function formatList(items, lang) {
+  return new Intl.ListFormat(LOCALES[lang] ?? LOCALES[DEFAULT_LANG], { type: 'conjunction' }).format(items);
+}

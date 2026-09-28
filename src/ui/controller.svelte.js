@@ -3,7 +3,7 @@ import {
   startSession, pauseSession, resumeSession, skipPhase, getState, shouldOfferResume,
 } from '../core/timer.js';
 import { markDone, unmark, programStats } from '../core/progress.js';
-import { translate, formatDuration, LANGS, DEFAULT_LANG, LOCALES, VOICE_LOCALES } from '../i18n/index.js';
+import { translate, formatDuration, formatList, LANGS, DEFAULT_LANG, LOCALES, VOICE_LOCALES } from '../i18n/index.js';
 import { createStorage } from '../platform/storage.js';
 import { createCuePlayer } from '../platform/audio.js';
 import { speak, cancelSpeech } from '../platform/speech.js';
@@ -225,6 +225,14 @@ export function volumeIcon() {
 export function cuesLabel() {
   const cues = activeCues(app.settings);
   return cues.length ? cues.map((cue) => t(`run.cue.${cue}`)).join(' + ') : null;
+}
+
+/** Workout screen audio note listing what will play; null when nothing will. */
+export function cuesSentence() {
+  const cues = activeCues(app.settings);
+  if (!cues.length) return null;
+  const items = ['voice', 'beeps', 'fanfare'].filter((cue) => cues.includes(cue)).map((cue) => t(`workout.cue.${cue}`));
+  return t('workout.audioOn', { list: formatList(items, app.lang) });
 }
 
 export function volumeLabel() {
