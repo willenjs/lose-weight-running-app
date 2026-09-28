@@ -208,7 +208,7 @@ export function audioMuted() {
 }
 
 export function volumeIcon() {
-  return isMuted(app.settings) ? 'speaker-off' : 'speaker';
+  return isMuted(app.settings) ? 'volume-off' : 'volume';
 }
 
 /** Run screen audio chip, e.g. "Beeps + Voice + Fanfare"; null when nothing plays. */

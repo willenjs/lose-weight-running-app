@@ -55,13 +55,13 @@
     <section class="card next">
       <div class="next-head">
         <span class="tag">{t('plan.next')}</span>
-        <span class="chip"><Icon name="timer" size={14} />{t('workout.total', { value: workoutMinutes(next) })}</span>
+        <span class="chip"><Icon name="total-time" size={14} />{t('workout.total', { value: workoutMinutes(next) })}</span>
       </div>
       <h2 class="next-title">{t('common.weekDay', { week: next.week, day: next.day })}</h2>
       <p class="shorthand num">{phaseShorthand(next)}</p>
       <PhaseBar workout={next} thin />
       <button class="btn btn-primary" onclick={() => openWorkout(next.id)}>
-        <Icon name="play" />{t('plan.start', { week: next.week, day: next.day })}
+        <Icon name="play-resume" />{t('plan.start', { week: next.week, day: next.day })}
       </button>
     </section>
   {:else}
@@ -81,7 +81,7 @@
   {/each}
 
   <section class="card goal">
-    <span class="goal-icon"><Icon name="flag" /></span>
+    <span class="goal-icon"><Icon name="milestone" /></span>
     <div>
       <h3>{t('plan.goalTitle')}</h3>
       <p>{t('plan.goalText')}</p>

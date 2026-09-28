@@ -33,7 +33,7 @@
 
     <header class="head">
       <div class="head-text">
-        <h2 id="audio-title"><span class="head-icon"><Icon name="tune" size={20} /></span>{t('audio.title')}</h2>
+        <h2 id="audio-title"><span class="head-icon"><Icon name="settings" size={20} /></span>{t('audio.title')}</h2>
         <p>{t('audio.subtitle')}</p>
       </div>
       <button class="round" bind:this={closeButton} onclick={closeAudioSheet} aria-label={t('audio.close')}>
@@ -41,7 +41,7 @@
       </button>
     </header>
 
-    <VolumeRow field="voiceVolume" icon="voice" accent="var(--mint)" title={t('audio.voice')} hint={t('audio.voiceHint')} tag={voiceTag()}>
+    <VolumeRow field="voiceVolume" icon="voice-coach" accent="var(--mint)" title={t('audio.voice')} hint={t('audio.voiceHint')} tag={voiceTag()}>
       <div class="styles" role="group" aria-label={t('audio.styleLabel')}>
         {#each VOICE_STYLES as style (style)}
           <button
@@ -57,12 +57,12 @@
       </div>
     </VolumeRow>
 
-    <VolumeRow field="beepVolume" icon="timer" accent="var(--walk)" title={t('audio.beeps')} hint={t('audio.beepsHint')} />
+    <VolumeRow field="beepVolume" icon="beeps" accent="var(--walk)" title={t('audio.beeps')} hint={t('audio.beepsHint')} />
 
-    <VolumeRow field="fanfareVolume" icon="trophy" accent="var(--run)" title={t('audio.fanfare')} hint={t('audio.fanfareHint')} />
+    <VolumeRow field="fanfareVolume" icon="fanfare-sound-test" accent="var(--run)" title={t('audio.fanfare')} hint={t('audio.fanfareHint')} />
 
     <button class="test" class:testing={app.audioTesting} onclick={testAudio}>
-      <span class="play"><Icon name={app.audioTesting ? 'bolt' : 'play'} size={18} /></span>
+      <span class="play"><Icon name={app.audioTesting ? 'waveform' : 'play-resume'} size={18} /></span>
       <span class="test-label">{t('audio.test')}</span>
       <span class="waves" aria-hidden="true">
         {#each [8, 16, 12, 20, 8] as height, i (i)}<span style="--h: {height}px; --i: {i}"></span>{/each}
@@ -70,7 +70,7 @@
     </button>
 
     <button class="btn btn-primary" onclick={closeAudioSheet}>
-      <Icon name="check-circle" />{t('audio.save')}
+      <Icon name="verified-circle" />{t('audio.save')}
     </button>
   </div>
 </div>

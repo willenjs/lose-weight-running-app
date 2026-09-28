@@ -2,6 +2,7 @@
   import { LANGS } from '../../i18n/index.js';
   import { app, t, setLang, goHome, openAudioSheet, audioMuted, volumeIcon } from '../controller.svelte.js';
   import Icon from './Icon.svelte';
+  import logoUrl from '../logo.svg';
 
   /** @type {{ subtitle: string, onback?: () => void }} */
   let { subtitle, onback } = $props();
@@ -12,7 +13,7 @@
     <button class="icon-btn" onclick={onback} aria-label={t('workout.back')}><Icon name="back" /></button>
   {/if}
   <button class="brand" onclick={goHome} aria-label="{t('header.home')}: {t('app.title')}, {subtitle}">
-    {#if !onback}<span class="logo"><Icon name="run" size={28} /></span>{/if}
+    {#if !onback}<img class="logo" src={logoUrl} alt="" width="57" height="28" />{/if}
     <span class="brand-text">
       <strong>{t('app.title')}</strong>
       <span>{subtitle}</span>
@@ -56,7 +57,7 @@
   }
   .icon-btn:first-child { color: var(--text); }
   .icon-btn.muted { color: var(--text-muted); }
-  .logo { flex: none; display: grid; color: var(--mint); }
+  .logo { flex: none; display: block; width: 57px; height: 28px; }
   .brand {
     flex: 1;
     min-width: 0;

@@ -33,21 +33,21 @@
     </section>
 
     <div class="grid">
-      <StatTile label={t('finished.totalTime')} value={workoutMinutes(workout)} unit={t('unit.min')} icon="timer" tone="mint" />
+      <StatTile label={t('finished.totalTime')} value={workoutMinutes(workout)} unit={t('unit.min')} icon="total-time" tone="mint" />
       <StatTile
         label={t('finished.phases')}
         value={workout.phases.length}
         unit={t('common.of', { total: workout.phases.length })}
-        icon="check"
+        icon="phases-done"
       />
       <StatTile
         label={t('finished.runTime')}
         value={Math.round(phaseSeconds(workout).run / 60)}
         unit={t('unit.min')}
-        icon="run"
+        icon="run-sprint"
         tone="run"
       />
-      <StatTile label={t('finished.overall')} value={stats.done} unit={t('common.of', { total: stats.total })} icon="flag" />
+      <StatTile label={t('finished.overall')} value={stats.done} unit={t('common.of', { total: stats.total })} icon="milestone" />
     </div>
 
     <section class="card program">
@@ -67,7 +67,7 @@
             <strong>{t('common.weekDay', { week: next.week, day: next.day })}</strong>
             <span class="num">{t('workout.total', { value: workoutMinutes(next) })} • {phaseShorthand(next)}</span>
           </span>
-          <span class="next-chevron"><Icon name="chevron" size={20} /></span>
+          <span class="next-chevron"><Icon name="expand" size={20} /></span>
         </button>
       {:else}
         <p class="all-done">{t('plan.allDone')}</p>

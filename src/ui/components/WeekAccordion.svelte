@@ -35,7 +35,7 @@
       </span>
     </span>
     <span class="count num">{doneCount}/{workouts.length}</span>
-    <span class="chevron" class:open><Icon name="chevron" size={20} /></span>
+    <span class="chevron" class:open><Icon name="expand" size={20} /></span>
   </button>
 
   {#if open}
@@ -46,7 +46,7 @@
         <li>
           <button class="day" class:next={isNext} onclick={() => openWorkout(workout.id)}>
             <span class="status" class:done class:next={isNext}>
-              <Icon name={done ? 'check' : isNext ? 'play' : 'circle'} size={18} />
+              <Icon name={done ? 'check' : isNext ? 'play-resume' : 'circle'} size={18} />
             </span>
             <span class="day-text">
               <span class="day-title">{t('plan.day', { day: workout.day })}</span>

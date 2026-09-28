@@ -22,7 +22,7 @@
     <div class="status">
       <span class="chip">{t('common.shortWeekDay', { week: workout.week, day: workout.day })}</span>
       <span class="chip" class:on={cues}>
-        <Icon name={cues ? 'speaker' : 'speaker-off'} size={14} />{cues ?? t('run.voiceOff')}
+        <Icon name={cues ? 'volume' : 'volume-off'} size={14} />{cues ?? t('run.voiceOff')}
       </span>
     </div>
 
@@ -49,12 +49,12 @@
     </section>
 
     <div class="tiles">
-      <StatTile label={t('run.remainingTotal')} value={formatClock(state.totalRemainingMs)} icon="timer" />
+      <StatTile label={t('run.remainingTotal')} value={formatClock(state.totalRemainingMs)} icon="total-time" />
       <StatTile
         label={t('run.phasesDone')}
         value={state.phaseIndex}
         unit={t('common.of', { total: workout.phases.length })}
-        icon="check"
+        icon="phases-done"
         tone="mint"
       />
     </div>
@@ -62,9 +62,9 @@
     {#if !app.audioAvailable}<p class="notice">{t('run.noAudio')}</p>{/if}
 
     <div class="controls">
-      <button class="ctl" onclick={skip}><Icon name="skip" /><span>{t('run.skip')}</span></button>
+      <button class="ctl" onclick={skip}><Icon name="skip-phase" /><span>{t('run.skip')}</span></button>
       {#if state.paused}
-        <button class="btn btn-primary" onclick={resume}><Icon name="play" />{t('run.resume')}</button>
+        <button class="btn btn-primary" onclick={resume}><Icon name="play-resume" />{t('run.resume')}</button>
       {:else}
         <button class="btn btn-primary" onclick={pause}><Icon name="pause" />{t('run.pause')}</button>
       {/if}

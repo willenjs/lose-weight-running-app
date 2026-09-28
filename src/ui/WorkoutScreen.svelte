@@ -26,7 +26,7 @@
   <section class="card hero">
     <div class="hero-tags">
       <span class="tag">{weekDay}</span>
-      <span class="chip"><Icon name="timer" size={14} />{t('workout.total', { value: workoutMinutes(workout) })}</span>
+      <span class="chip"><Icon name="total-time" size={14} />{t('workout.total', { value: workoutMinutes(workout) })}</span>
     </div>
     <h1>{t('workout.heading')}</h1>
     <p>{t(`week.${workout.week}.title`)} • {t(`week.${workout.week}.subtitle`)}</p>
@@ -80,7 +80,7 @@
   </section>
 
   <section class="card note" class:off={!audioNote}>
-    <span class="note-icon"><Icon name={audioNote ? 'speaker' : 'speaker-off'} size={20} /></span>
+    <span class="note-icon"><Icon name={audioNote ? 'volume' : 'volume-off'} size={20} /></span>
     <p>{audioNote ?? t('workout.voiceOff')}</p>
   </section>
 
@@ -92,7 +92,7 @@
   {/if}
 
   <div class="sticky">
-    <button class="btn btn-primary" onclick={startWorkout}><Icon name="play" />{t('workout.start')}</button>
+    <button class="btn btn-primary" onclick={startWorkout}><Icon name="play-resume" />{t('workout.start')}</button>
   </div>
 </div>
 

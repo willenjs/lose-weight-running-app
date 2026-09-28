@@ -21,7 +21,7 @@
 
 <section class="volume-row" class:off={value === 0} style="--accent: {accent}">
   <div class="top">
-    <span class="tile"><Icon name={value === 0 ? 'speaker-off' : icon} size={22} /></span>
+    <span class="tile"><Icon name={value === 0 ? 'volume-off' : icon} size={22} /></span>
     <span class="text">
       <strong>{title}{#if tag} <span class="tag-lang">{tag}</span>{/if}</strong>
       <span>{hint}</span>
