@@ -1,6 +1,6 @@
 <script>
   import {
-    app, t, setAudio, testAudio, closeAudioSheet, volumeIcon, volumeLabel, voiceTag,
+    app, t, setAudio, previewVolume, testAudio, closeAudioSheet, volumeIcon, volumeLabel, voiceTag,
     VOLUME_PRESETS, VOICE_STYLES,
   } from '../controller.svelte.js';
   import Icon from './Icon.svelte';
@@ -14,7 +14,13 @@
   /** @type {HTMLButtonElement | undefined} */
   let closeButton = $state();
 
-  $effect(() => closeButton?.focus());
+  // Focus the sheet on open and give focus back to the opener on close.
+  $effect(() => {
+    const opener = /** @type {HTMLElement | null} */ (document.activeElement);
+    closeButton?.focus();
+    // Deferred: the opener sits under the inert screens until this update finishes.
+    return () => queueMicrotask(() => opener?.focus?.());
+  });
 
   function onKeydown(event) {
     if (event.key === 'Escape') closeAudioSheet();
@@ -62,7 +68,8 @@
         value={s.volume}
         style="--fill: {s.volume}%"
         aria-label={t('audio.master')}
-        oninput={(event) => setAudio({ volume: Number(event.currentTarget.value) })}
+        oninput={(event) => previewVolume(Number(event.currentTarget.value))}
+        onchange={(event) => setAudio({ volume: Number(event.currentTarget.value) })}
       />
       <div class="presets">
         {#each VOLUME_PRESETS as preset (preset)}

@@ -172,6 +172,11 @@ export function setAudio(patch) {
   }
 }
 
+/** Live slider feedback while dragging: no saving or re-scheduling until setAudio on release. */
+export function previewVolume(volume) {
+  app.settings = normalizeAudioSettings({ ...$state.snapshot(app.settings), volume });
+}
+
 export function testAudio() {
   cuePlayer.test(app.settings.volume);
   say(t('audio.testPhrase'));

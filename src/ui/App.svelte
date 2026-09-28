@@ -8,15 +8,22 @@
 </script>
 
 <main class="app">
-  {#if app.screen === 'workout'}
-    <WorkoutScreen />
-  {:else if app.screen === 'run'}
-    <RunScreen />
-  {:else if app.screen === 'finished'}
-    <FinishedScreen />
-  {:else}
-    <PlanScreen />
-  {/if}
+  <!-- inert while the sheet is open: keeps Tab and screen readers inside it. -->
+  <div class="screens" inert={app.audioSheetOpen}>
+    {#if app.screen === 'workout'}
+      <WorkoutScreen />
+    {:else if app.screen === 'run'}
+      <RunScreen />
+    {:else if app.screen === 'finished'}
+      <FinishedScreen />
+    {:else}
+      <PlanScreen />
+    {/if}
+  </div>
   {#if app.audioSheetOpen}<AudioSheet />{/if}
   {#if app.toast}<div class="toast" role="status">{app.toast}</div>{/if}
 </main>
+
+<style>
+  .screens { display: contents; }
+</style>
