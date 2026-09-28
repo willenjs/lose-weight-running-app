@@ -4,6 +4,7 @@
   import WorkoutScreen from './WorkoutScreen.svelte';
   import RunScreen from './RunScreen.svelte';
   import FinishedScreen from './FinishedScreen.svelte';
+  import AudioSheet from './components/AudioSheet.svelte';
 </script>
 
 <main class="app">
@@ -16,5 +17,6 @@
   {:else}
     <PlanScreen />
   {/if}
+  {#if app.audioSheetOpen}<AudioSheet />{/if}
   {#if app.toast}<div class="toast" role="status">{app.toast}</div>{/if}
 </main>
