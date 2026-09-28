@@ -9,7 +9,7 @@ import { createCuePlayer } from '../platform/audio.js';
 import { speak, cancelSpeech } from '../platform/speech.js';
 import { createWakeLock } from '../platform/wakeLock.js';
 import { share, canShare } from '../platform/share.js';
-import { normalizeAudioSettings, isMuted, volumeLevel, testSequence } from '../core/audioSettings.js';
+import { normalizeAudioSettings, isMuted, volumeLevel, testSequence, activeCues } from '../core/audioSettings.js';
 import { coachExtras } from '../core/coach.js';
 
 export { VOICE_STYLES, MIN_BEEP_LEVEL } from '../core/audioSettings.js';
@@ -27,7 +27,7 @@ const TEST_PHASE_SECONDS = 5 * 60;
 
 const storage = createStorage();
 const cuePlayer = createCuePlayer();
-const wakeLock = createWakeLock({ onChange: (active) => { app.wakeLockActive = active; } });
+const wakeLock = createWakeLock();
 
 export const app = $state({
   /** @type {'plan' | 'workout' | 'run' | 'finished'} */
@@ -45,7 +45,6 @@ export const app = $state({
   settings: storage.loadSettings(),
   audioSheetOpen: false,
   audioTesting: false,
-  wakeLockActive: false,
   confirmingStop: false,
   /** @type {string | null} */
   toast: null,
@@ -220,6 +219,12 @@ export function volumeIcon() {
   const level = volumeLevel(app.settings.volume);
   if (level === 'off') return 'speaker-off';
   return level === 'low' ? 'speaker-low' : 'speaker';
+}
+
+/** Run screen audio chip, e.g. "Beeps + Voice + Fanfare"; null when nothing plays. */
+export function cuesLabel() {
+  const cues = activeCues(app.settings);
+  return cues.length ? cues.map((cue) => t(`run.cue.${cue}`)).join(' + ') : null;
 }
 
 export function volumeLabel() {

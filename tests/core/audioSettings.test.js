@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   DEFAULT_AUDIO_SETTINGS, VOICE_STYLES, MIN_BEEP_LEVEL,
-  normalizeAudioSettings, volumeLevel, isMuted, testSequence,
+  normalizeAudioSettings, volumeLevel, isMuted, testSequence, activeCues,
 } from '../../src/core/audioSettings.js';
 
 describe('audio settings defaults', () => {
@@ -118,5 +118,23 @@ describe('testSequence', () => {
 
   it('plays nothing at volume 0', () => {
     expect(testSequence({ ...all, volume: 0 })).toEqual({ lead: [], speak: false, voiceExtras: [], tail: [] });
+  });
+});
+
+describe('activeCues', () => {
+  const all = { ...DEFAULT_AUDIO_SETTINGS };
+
+  it('lists every cue that is switched on, in a fixed order', () => {
+    expect(activeCues(all)).toEqual(['beeps', 'voice', 'fanfare']);
+    expect(activeCues({ ...all, voice: false })).toEqual(['beeps', 'fanfare']);
+    expect(activeCues({ ...all, beeps: false, fanfare: false })).toEqual(['voice']);
+  });
+
+  it('is empty at 0% volume, whatever is switched on', () => {
+    expect(activeCues({ ...all, volume: 0 })).toEqual([]);
+  });
+
+  it('drops the tones (beeps, fanfare) at 0% beep level but keeps the voice', () => {
+    expect(activeCues({ ...all, beepLevel: 0 })).toEqual(['voice']);
   });
 });

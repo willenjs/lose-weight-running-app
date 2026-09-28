@@ -92,3 +92,16 @@ export function testSequence(settings) {
   const voiceExtras = settings.voiceStyle === 'intense' ? ['coach.run'] : [];
   return { lead, speak: true, voiceExtras, tail };
 }
+
+/**
+ * The cues a runner will actually hear, for the run screen's audio chip.
+ * Nothing at 0% volume; tones (beeps, fanfare) drop out at 0% beep level.
+ * @param {AudioSettings} settings
+ * @returns {('beeps' | 'voice' | 'fanfare')[]}
+ */
+export function activeCues(settings) {
+  if (isMuted(settings)) return [];
+  const tones = settings.beepLevel > 0;
+  const on = { beeps: settings.beeps && tones, voice: settings.voice, fanfare: settings.fanfare && tones };
+  return /** @type {const} */ (['beeps', 'voice', 'fanfare']).filter((cue) => on[cue]);
+}

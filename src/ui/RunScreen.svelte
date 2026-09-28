@@ -1,7 +1,7 @@
 <script>
   import { findWorkout, totalSeconds } from '../core/plan.js';
   import { getState, formatClock } from '../core/timer.js';
-  import { app, t, pause, resume, skip, stop, requestStop, cancelStop, audioMuted } from './controller.svelte.js';
+  import { app, t, pause, resume, skip, stop, requestStop, cancelStop, cuesLabel } from './controller.svelte.js';
   import AppHeader from './components/AppHeader.svelte';
   import ConfirmDialog from './components/ConfirmDialog.svelte';
   import Icon from './components/Icon.svelte';
@@ -12,6 +12,7 @@
   const state = $derived(workout ? getState(app.session, workout, app.now) : null);
   const phase = $derived(state ? workout.phases[state.phaseIndex] : null);
   const nextPhase = $derived(state ? workout.phases[state.phaseIndex + 1] : null);
+  const cues = $derived(cuesLabel());
 </script>
 
 {#if state}
@@ -20,12 +21,9 @@
 
     <div class="status">
       <span class="chip">{t('common.shortWeekDay', { week: workout.week, day: workout.day })}</span>
-      <span class="chip" class:on={!audioMuted()}>
-        <Icon name={audioMuted() ? 'speaker-off' : 'speaker'} size={14} />{t(audioMuted() ? 'run.voiceOff' : app.settings.voice ? 'run.voiceOn' : 'run.beepsOnly')}
+      <span class="chip" class:on={cues}>
+        <Icon name={cues ? 'speaker' : 'speaker-off'} size={14} />{cues ?? t('run.voiceOff')}
       </span>
-      {#if app.wakeLockActive}
-        <span class="chip on"><Icon name="bolt" size={14} />{t('run.screenOn')}</span>
-      {/if}
     </div>
 
     <section class="card timeline">
