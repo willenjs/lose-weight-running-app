@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { findWorkout } from '../../src/core/plan.js';
 import { startSession, pauseSession } from '../../src/core/timer.js';
-import { upcomingCues } from '../../src/core/cues.js';
+import { upcomingCues, filterCues } from '../../src/core/cues.js';
 
 const w = findWorkout('w1d1'); // 360/120/360/120/300 s
 const T0 = 1_000_000;
@@ -39,5 +39,36 @@ describe('upcomingCues', () => {
 
   it('schedules nothing once finished', () => {
     expect(upcomingCues(fresh(), w, T0 + s(1260))).toEqual([]);
+  });
+});
+
+describe('filterCues', () => {
+  const all = upcomingCues(fresh(), w, T0);
+  const on = { volume: 100, beeps: true, fanfare: true };
+  const kinds = (cues) => new Set(cues.map((c) => c.kind));
+
+  it('keeps everything when all cues are on', () => {
+    expect(filterCues(all, on)).toEqual(all);
+  });
+
+  it('drops the countdown pips when beeps are off, keeping phase tones', () => {
+    const cues = filterCues(all, { ...on, beeps: false });
+    expect(kinds(cues)).toEqual(new Set(['walk', 'jog', 'run', 'finish']));
+    expect(cues).toHaveLength(5 + 1);
+  });
+
+  it('drops the finish melody when the fanfare is off', () => {
+    const cues = filterCues(all, { ...on, fanfare: false });
+    expect(cues.some((c) => c.kind === 'finish')).toBe(false);
+    expect(cues).toHaveLength(all.length - 1);
+  });
+
+  it('keeps phase-start tones even with beeps and fanfare off', () => {
+    const cues = filterCues(all, { volume: 50, beeps: false, fanfare: false });
+    expect(cues.map((c) => c.kind)).toEqual(['walk', 'jog', 'walk', 'jog', 'run']);
+  });
+
+  it('schedules nothing at volume 0', () => {
+    expect(filterCues(all, { ...on, volume: 0 })).toEqual([]);
   });
 });

@@ -34,3 +34,18 @@ export function upcomingCues(session, workout, now) {
     .sort((a, b) => a.atMs - b.atMs)
     .map((cue) => ({ kind: cue.kind, inMs: cue.atMs - elapsed }));
 }
+
+const COUNTDOWN_KINDS = new Set(['pip', 'lastPip']);
+
+/**
+ * Cues the runner asked to hear. Phase-start tones always stay (unless
+ * muted): they are how phases are told apart without looking.
+ * @param {Cue[]} cues
+ * @param {{ volume: number, beeps: boolean, fanfare: boolean }} settings
+ * @returns {Cue[]}
+ */
+export function filterCues(cues, { volume, beeps, fanfare }) {
+  if (volume <= 0) return [];
+  return cues.filter((cue) =>
+    (beeps || !COUNTDOWN_KINDS.has(cue.kind)) && (fanfare || cue.kind !== 'finish'));
+}
