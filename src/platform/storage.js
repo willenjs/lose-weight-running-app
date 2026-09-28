@@ -1,6 +1,9 @@
 import { emptyProgress } from '../core/progress.js';
+import { DEFAULT_AUDIO_SETTINGS, normalizeAudioSettings } from '../core/audioSettings.js';
 
 const VERSION = 1;
+// v1 stored { muted }; v2 stores AudioSettings.
+const SETTINGS_VERSION = 2;
 
 export const STORAGE_KEYS = {
   progress: 'runningAssistant.progress',
@@ -30,25 +33,35 @@ const isSession = (value) =>
   typeof value.pausedTotalMs === 'number' &&
   typeof value.skippedMs === 'number';
 
-const isSettings = (value) => isObject(value) && typeof value.muted === 'boolean';
+/** v1 → v2: a muted app starts at volume 0, otherwise at full volume. */
+function migrateSettings(version, data) {
+  if (version === 1 && isObject(data) && typeof data.muted === 'boolean') {
+    return { ...DEFAULT_AUDIO_SETTINGS, volume: data.muted ? 0 : 100 };
+  }
+  return undefined;
+}
 
 /** @param {Pick<Storage, 'getItem' | 'setItem' | 'removeItem'> | null} [backend] */
 export function createStorage(backend = defaultBackend()) {
-  function read(key, isValid, fallback) {
+  /**
+   * @param {{ version?: number, migrate?: (version: unknown, data: unknown) => unknown }} [options]
+   *   migrate: turns data saved under an older version into the current shape.
+   */
+  function read(key, isValid, fallback, { version = VERSION, migrate } = {}) {
     try {
       const raw = backend?.getItem(key);
       if (raw == null) return fallback;
       const envelope = JSON.parse(raw);
-      if (envelope?.version !== VERSION || !isValid(envelope.data)) return fallback;
-      return envelope.data;
+      const data = envelope?.version === version ? envelope.data : migrate?.(envelope?.version, envelope?.data);
+      return isValid(data) ? data : fallback;
     } catch {
       return fallback;
     }
   }
 
-  function write(key, data) {
+  function write(key, data, version = VERSION) {
     try {
-      backend?.setItem(key, JSON.stringify({ version: VERSION, data }));
+      backend?.setItem(key, JSON.stringify({ version, data }));
     } catch {
       // Storage full or blocked: the app keeps working without persistence.
     }
@@ -70,7 +83,9 @@ export function createStorage(backend = defaultBackend()) {
     clearSession: () => remove(STORAGE_KEYS.session),
     loadLang: () => read(STORAGE_KEYS.lang, (value) => typeof value === 'string', null),
     saveLang: (lang) => write(STORAGE_KEYS.lang, lang),
-    loadSettings: () => read(STORAGE_KEYS.settings, isSettings, { muted: false }),
-    saveSettings: (settings) => write(STORAGE_KEYS.settings, settings),
+    loadSettings: () => normalizeAudioSettings(
+      read(STORAGE_KEYS.settings, isObject, null, { version: SETTINGS_VERSION, migrate: migrateSettings }),
+    ),
+    saveSettings: (settings) => write(STORAGE_KEYS.settings, settings, SETTINGS_VERSION),
   };
 }

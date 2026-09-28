@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { createStorage, STORAGE_KEYS } from '../../src/platform/storage.js';
+import { DEFAULT_AUDIO_SETTINGS } from '../../src/core/audioSettings.js';
 
 function fakeBackend(initial = {}) {
   const data = new Map(Object.entries(initial));
@@ -82,27 +83,57 @@ describe('createStorage', () => {
     expect(storage.loadLang()).toBeNull();
   });
 
-  it('round-trips settings in a version envelope', () => {
+  const audio = { volume: 60, beeps: false, voice: true, voiceStyle: 'intense', fanfare: false };
+  const settingsEntry = (version, data) => ({ [STORAGE_KEYS.settings]: JSON.stringify({ version, data }) });
+
+  it('round-trips audio settings in a version 2 envelope', () => {
     const backend = fakeBackend();
     const storage = createStorage(backend);
-    storage.saveSettings({ muted: true });
-    expect(storage.loadSettings()).toEqual({ muted: true });
-    expect(JSON.parse(backend.data.get('runningAssistant.settings'))).toEqual({ version: 1, data: { muted: true } });
+    storage.saveSettings(audio);
+    expect(storage.loadSettings()).toEqual(audio);
+    expect(JSON.parse(backend.data.get('runningAssistant.settings'))).toEqual({ version: 2, data: audio });
   });
 
-  it('defaults settings to unmuted when missing, stale or malformed', () => {
-    expect(createStorage(fakeBackend()).loadSettings()).toEqual({ muted: false });
-    expect(createStorage(fakeBackend({
-      [STORAGE_KEYS.settings]: JSON.stringify({ version: 99, data: { muted: true } }),
-    })).loadSettings()).toEqual({ muted: false });
-    expect(createStorage(fakeBackend({
-      [STORAGE_KEYS.settings]: JSON.stringify({ version: 1, data: { muted: 'yes' } }),
-    })).loadSettings()).toEqual({ muted: false });
+  it('keeps other keys on version 1', () => {
+    const backend = fakeBackend();
+    const storage = createStorage(backend);
+    storage.saveSettings(audio);
+    storage.saveLang('pt');
+    expect(JSON.parse(backend.data.get('runningAssistant.lang')).version).toBe(1);
+  });
+
+  it('migrates version 1 { muted } settings', () => {
+    expect(createStorage(fakeBackend(settingsEntry(1, { muted: true }))).loadSettings())
+      .toEqual({ ...DEFAULT_AUDIO_SETTINGS, volume: 0 });
+    expect(createStorage(fakeBackend(settingsEntry(1, { muted: false }))).loadSettings())
+      .toEqual(DEFAULT_AUDIO_SETTINGS);
+  });
+
+  it('defaults audio settings when missing, unknown version or malformed', () => {
+    expect(createStorage(fakeBackend()).loadSettings()).toEqual(DEFAULT_AUDIO_SETTINGS);
+    expect(createStorage(fakeBackend(settingsEntry(99, audio))).loadSettings()).toEqual(DEFAULT_AUDIO_SETTINGS);
+    expect(createStorage(fakeBackend(settingsEntry(1, { muted: 'yes' }))).loadSettings()).toEqual(DEFAULT_AUDIO_SETTINGS);
+    expect(createStorage(fakeBackend(settingsEntry(2, 'loud'))).loadSettings()).toEqual(DEFAULT_AUDIO_SETTINGS);
+    expect(createStorage(fakeBackend({ [STORAGE_KEYS.settings]: '{oops' })).loadSettings()).toEqual(DEFAULT_AUDIO_SETTINGS);
+  });
+
+  it('repairs partial or out-of-range version 2 settings', () => {
+    expect(createStorage(fakeBackend(settingsEntry(2, { volume: 150, voiceStyle: 'shouty' }))).loadSettings())
+      .toEqual(DEFAULT_AUDIO_SETTINGS);
+    expect(createStorage(fakeBackend(settingsEntry(2, { volume: -3, voice: false }))).loadSettings())
+      .toEqual({ ...DEFAULT_AUDIO_SETTINGS, volume: 0, voice: false });
+  });
+
+  it('returns a fresh settings object each time', () => {
+    const storage = createStorage(fakeBackend());
+    const first = storage.loadSettings();
+    first.volume = 5;
+    expect(storage.loadSettings().volume).toBe(100);
   });
 
   it('never throws on settings with a broken backend', () => {
     const storage = createStorage(throwingBackend);
-    expect(() => storage.saveSettings({ muted: true })).not.toThrow();
-    expect(storage.loadSettings()).toEqual({ muted: false });
+    expect(() => storage.saveSettings(audio)).not.toThrow();
+    expect(storage.loadSettings()).toEqual(DEFAULT_AUDIO_SETTINGS);
   });
 });
