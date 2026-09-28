@@ -9,6 +9,10 @@ import { createCuePlayer } from '../platform/audio.js';
 import { speak, cancelSpeech } from '../platform/speech.js';
 import { createWakeLock } from '../platform/wakeLock.js';
 import { share, canShare } from '../platform/share.js';
+import { normalizeAudioSettings, isMuted, volumeLevel } from '../core/audioSettings.js';
+import { coachExtras } from '../core/coach.js';
+
+export { VOLUME_PRESETS, VOICE_STYLES } from '../core/audioSettings.js';
 
 /** @typedef {import('../core/timer.js').Session} Session */
 
@@ -36,7 +40,8 @@ export const app = $state({
   lang: DEFAULT_LANG,
   now: Date.now(),
   audioAvailable: true,
-  muted: storage.loadSettings().muted,
+  settings: storage.loadSettings(),
+  audioSheetOpen: false,
   wakeLockActive: false,
   confirmingStop: false,
   /** @type {string | null} */
@@ -147,15 +152,48 @@ export function stop() {
   app.screen = 'workout';
 }
 
-export function toggleMute() {
-  app.muted = !app.muted;
-  storage.saveSettings({ muted: app.muted });
-  if (app.muted) cancelSpeech();
-  // Re-schedule so the change applies now; still called from the tap (a user gesture).
+export function openAudioSheet() {
+  app.audioSheetOpen = true;
+}
+
+export function closeAudioSheet() {
+  app.audioSheetOpen = false;
+}
+
+/** Applies and saves audio settings; called from taps and slider input (user gestures). */
+export function setAudio(patch) {
+  app.settings = normalizeAudioSettings({ ...$state.snapshot(app.settings), ...patch });
+  storage.saveSettings($state.snapshot(app.settings));
+  if (!canSpeak()) cancelSpeech();
+  // Re-schedule so the change applies now.
   if (app.session) {
     cuePlayer.stop();
     if (app.session.pausedAt === null) playCues();
   }
+}
+
+export function testAudio() {
+  cuePlayer.test(app.settings.volume);
+  say(t('audio.testPhrase'));
+}
+
+export function audioMuted() {
+  return isMuted(app.settings);
+}
+
+export function volumeIcon() {
+  const level = volumeLevel(app.settings.volume);
+  if (level === 'off') return 'speaker-off';
+  return level === 'low' ? 'speaker-low' : 'speaker';
+}
+
+export function volumeLabel() {
+  return t(`audio.level.${volumeLevel(app.settings.volume)}`);
+}
+
+/** Voice language tag shown next to the voice coach, e.g. "PT-BR". */
+export function voiceTag() {
+  return LOCALES[app.lang].toUpperCase();
 }
 
 export async function shareResult() {
@@ -219,7 +257,7 @@ function beginRun(session) {
 
 function playCues() {
   app.audioAvailable = cuePlayer.start(
-    $state.snapshot(app.session), currentWorkout(), Date.now(), { muted: app.muted },
+    $state.snapshot(app.session), currentWorkout(), Date.now(), $state.snapshot(app.settings),
   );
 }
 
@@ -256,24 +294,34 @@ function tick() {
   }
   if (!state.paused && state.phaseIndex !== lastPhaseIndex) {
     lastPhaseIndex = state.phaseIndex;
-    announcePhase(workout.phases[state.phaseIndex], state.phaseRemainingMs);
+    announcePhase(workout, state.phaseIndex, state.phaseRemainingMs);
   }
 }
 
-function announcePhase(phase, remainingMs) {
-  if (app.muted) return;
-  const text = t('cue.phase', {
+function announcePhase(workout, phaseIndex, remainingMs) {
+  const phase = workout.phases[phaseIndex];
+  const command = t('cue.phase', {
     phase: t(`phase.${phase.type}`),
     duration: formatDuration(Math.round(remainingMs / 1000), app.lang),
   });
-  speak(text, VOICE_LOCALES[app.lang]);
+  const extras = coachExtras(workout, phaseIndex, app.settings.voiceStyle).map((key) => t(key));
+  say(extras.length ? `${command}. ${extras.join(' ')}` : command);
+}
+
+function canSpeak() {
+  return app.settings.voice && !isMuted(app.settings);
+}
+
+function say(text) {
+  if (!canSpeak()) return;
+  speak(text, VOICE_LOCALES[app.lang], { volume: app.settings.volume });
 }
 
 function finish(workout) {
   saveProgress(markDone(app.progress, workout.id, new Date().toISOString()));
   endRun();
   app.screen = 'finished';
-  if (!app.muted) speak(t('cue.finish'), VOICE_LOCALES[app.lang]);
+  say(t('cue.finish'));
   finishTimer = setTimeout(() => cuePlayer.stop(), FINISH_AUDIO_GRACE_MS);
 }
 

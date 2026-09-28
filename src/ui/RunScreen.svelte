@@ -1,7 +1,7 @@
 <script>
   import { findWorkout, totalSeconds } from '../core/plan.js';
   import { getState, formatClock } from '../core/timer.js';
-  import { app, t, pause, resume, skip, stop, requestStop, cancelStop } from './controller.svelte.js';
+  import { app, t, pause, resume, skip, stop, requestStop, cancelStop, audioMuted } from './controller.svelte.js';
   import AppHeader from './components/AppHeader.svelte';
   import ConfirmDialog from './components/ConfirmDialog.svelte';
   import Icon from './components/Icon.svelte';
@@ -20,8 +20,8 @@
 
     <div class="status">
       <span class="chip">{t('common.shortWeekDay', { week: workout.week, day: workout.day })}</span>
-      <span class="chip" class:on={!app.muted}>
-        <Icon name={app.muted ? 'speaker-off' : 'speaker'} size={14} />{t(app.muted ? 'run.voiceOff' : 'run.voiceOn')}
+      <span class="chip" class:on={!audioMuted()}>
+        <Icon name={audioMuted() ? 'speaker-off' : 'speaker'} size={14} />{t(audioMuted() ? 'run.voiceOff' : app.settings.voice ? 'run.voiceOn' : 'run.beepsOnly')}
       </span>
       {#if app.wakeLockActive}
         <span class="chip on"><Icon name="bolt" size={14} />{t('run.screenOn')}</span>

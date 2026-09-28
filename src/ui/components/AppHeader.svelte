@@ -1,6 +1,6 @@
 <script>
   import { LANGS } from '../../i18n/index.js';
-  import { app, t, setLang, toggleMute, goHome } from '../controller.svelte.js';
+  import { app, t, setLang, goHome, openAudioSheet, audioMuted, volumeIcon } from '../controller.svelte.js';
   import Icon from './Icon.svelte';
 
   /** @type {{ subtitle: string, onback?: () => void }} */
@@ -27,12 +27,12 @@
   </div>
   <button
     class="icon-btn"
-    class:muted={app.muted}
-    onclick={toggleMute}
-    aria-pressed={app.muted}
-    aria-label={t(app.muted ? 'header.unmute' : 'header.mute')}
+    class:muted={audioMuted()}
+    onclick={openAudioSheet}
+    aria-haspopup="dialog"
+    aria-label={t('header.audio')}
   >
-    <Icon name={app.muted ? 'speaker-off' : 'speaker'} />
+    <Icon name={volumeIcon()} />
   </button>
 </header>
 

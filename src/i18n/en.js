@@ -4,8 +4,6 @@ export default {
   'lang.label': 'Language',
   'header.home': 'Home',
   'header.audio': 'Audio & volume',
-  'header.mute': 'Mute audio',
-  'header.unmute': 'Unmute audio',
   'common.weekDay': 'Week {week} • Day {day}',
   'common.shortWeekDay': 'W{week} • D{day}',
   'common.of': 'of {total}',

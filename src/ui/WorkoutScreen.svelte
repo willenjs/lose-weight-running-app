@@ -2,7 +2,7 @@
   import { findWorkout, totalSeconds, phaseSeconds, phaseRole } from '../core/plan.js';
   import { formatClock } from '../core/timer.js';
   import {
-    app, t, formatDate, goToPlan, startWorkout, unmarkWorkout, workoutMinutes,
+    app, t, formatDate, goToPlan, startWorkout, unmarkWorkout, workoutMinutes, audioMuted,
   } from './controller.svelte.js';
   import AppHeader from './components/AppHeader.svelte';
   import Icon from './components/Icon.svelte';
@@ -78,9 +78,9 @@
     </div>
   </section>
 
-  <section class="card note" class:off={app.muted}>
-    <span class="note-icon"><Icon name={app.muted ? 'speaker-off' : 'speaker'} size={20} /></span>
-    <p>{t(app.muted ? 'workout.voiceOff' : 'workout.voiceOn')}</p>
+  <section class="card note" class:off={audioMuted()}>
+    <span class="note-icon"><Icon name={audioMuted() ? 'speaker-off' : 'speaker'} size={20} /></span>
+    <p>{t(audioMuted() ? 'workout.voiceOff' : 'workout.voiceOn')}</p>
   </section>
 
   {#if completedAt}

@@ -18,8 +18,9 @@ function pickVoice(synth, locales) {
  * hold speech back, so the pre-scheduled beeps are the reliable cue there.
  * @param {string} text
  * @param {string[]} locales preferred voice locales, best first
+ * @param {{ volume?: number }} [options] volume 0–100
  */
-export function speak(text, locales) {
+export function speak(text, locales, { volume = 100 } = {}) {
   const synth = globalThis.speechSynthesis;
   if (!synth || document.visibilityState !== 'visible') return;
   synth.cancel();
@@ -28,6 +29,7 @@ export function speak(text, locales) {
   if (voice) utterance.voice = voice;
   utterance.lang = voice?.lang ?? locales[0];
   utterance.rate = SPEECH_RATE;
+  utterance.volume = Math.min(100, Math.max(0, volume)) / 100;
   synth.speak(utterance);
 }
 
