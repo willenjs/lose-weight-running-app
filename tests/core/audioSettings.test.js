@@ -1,13 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import {
-  DEFAULT_AUDIO_SETTINGS, VOLUME_PRESETS, VOICE_STYLES,
-  normalizeAudioSettings, volumeLevel, isMuted,
+  DEFAULT_AUDIO_SETTINGS, VOLUME_PRESETS, VOICE_STYLES, MIN_BEEP_LEVEL,
+  normalizeAudioSettings, volumeLevel, isMuted, testSequence,
 } from '../../src/core/audioSettings.js';
 
 describe('audio settings defaults', () => {
   it('keep today\'s behavior: full volume, everything on, plain commands', () => {
     expect(DEFAULT_AUDIO_SETTINGS).toEqual({
-      volume: 100, beeps: true, voice: true, voiceStyle: 'commands', fanfare: true,
+      volume: 100, beepLevel: 60, beeps: true, voice: true, voiceStyle: 'commands', fanfare: true,
     });
     expect(Object.isFrozen(DEFAULT_AUDIO_SETTINGS)).toBe(true);
   });
@@ -29,10 +29,10 @@ describe('normalizeAudioSettings', () => {
 
   it('keeps valid fields and fills missing ones from the defaults', () => {
     expect(normalizeAudioSettings({ volume: 40, voice: false })).toEqual({
-      volume: 40, beeps: true, voice: false, voiceStyle: 'commands', fanfare: true,
+      volume: 40, beepLevel: 60, beeps: true, voice: false, voiceStyle: 'commands', fanfare: true,
     });
     expect(normalizeAudioSettings({ voiceStyle: 'intense', beeps: false, fanfare: false })).toEqual({
-      volume: 100, beeps: false, voice: true, voiceStyle: 'intense', fanfare: false,
+      volume: 100, beepLevel: 60, beeps: false, voice: true, voiceStyle: 'intense', fanfare: false,
     });
   });
 
@@ -69,5 +69,53 @@ describe('isMuted', () => {
     expect(isMuted({ ...DEFAULT_AUDIO_SETTINGS, volume: 0 })).toBe(true);
     expect(isMuted({ ...DEFAULT_AUDIO_SETTINGS, volume: 1 })).toBe(false);
     expect(isMuted({ ...DEFAULT_AUDIO_SETTINGS, beeps: false, voice: false, fanfare: false })).toBe(false);
+  });
+});
+
+describe('beep level', () => {
+  it('fills a missing level from the default (settings saved before it existed)', () => {
+    expect(normalizeAudioSettings({ volume: 80, beeps: true }).beepLevel).toBe(60);
+  });
+
+  it('clamps to the minimum..100, rounds and accepts numeric strings', () => {
+    expect(MIN_BEEP_LEVEL).toBe(25);
+    expect(normalizeAudioSettings({ beepLevel: 10 }).beepLevel).toBe(25);
+    expect(normalizeAudioSettings({ beepLevel: 0 }).beepLevel).toBe(25);
+    expect(normalizeAudioSettings({ beepLevel: 130 }).beepLevel).toBe(100);
+    expect(normalizeAudioSettings({ beepLevel: 44.4 }).beepLevel).toBe(44);
+    expect(normalizeAudioSettings({ beepLevel: '75' }).beepLevel).toBe(75);
+    expect(normalizeAudioSettings({ beepLevel: 'loud' }).beepLevel).toBe(60);
+  });
+});
+
+describe('testSequence', () => {
+  const all = { ...DEFAULT_AUDIO_SETTINGS };
+
+  it('plays countdown, run tone, the voice line, then the fanfare when all are on', () => {
+    expect(testSequence(all)).toEqual({
+      lead: ['pip', 'pip', 'lastPip', 'run'], speak: true, voiceExtras: [], tail: ['finish'],
+    });
+  });
+
+  it('leaves the countdown out when beeps are off', () => {
+    expect(testSequence({ ...all, beeps: false }).lead).toEqual(['run']);
+  });
+
+  it('leaves the fanfare out when it is off', () => {
+    expect(testSequence({ ...all, fanfare: false }).tail).toEqual([]);
+  });
+
+  it('plays the fanfare right after the tones when the voice is off', () => {
+    expect(testSequence({ ...all, voice: false })).toEqual({
+      lead: ['pip', 'pip', 'lastPip', 'run', 'finish'], speak: false, voiceExtras: [], tail: [],
+    });
+  });
+
+  it('adds the intense coach line to the sample announcement', () => {
+    expect(testSequence({ ...all, voiceStyle: 'intense' }).voiceExtras).toEqual(['coach.run']);
+  });
+
+  it('plays nothing at volume 0', () => {
+    expect(testSequence({ ...all, volume: 0 })).toEqual({ lead: [], speak: false, voiceExtras: [], tail: [] });
   });
 });

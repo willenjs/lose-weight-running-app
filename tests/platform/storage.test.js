@@ -83,7 +83,7 @@ describe('createStorage', () => {
     expect(storage.loadLang()).toBeNull();
   });
 
-  const audio = { volume: 60, beeps: false, voice: true, voiceStyle: 'intense', fanfare: false };
+  const audio = { volume: 60, beepLevel: 40, beeps: false, voice: true, voiceStyle: 'intense', fanfare: false };
   const settingsEntry = (version, data) => ({ [STORAGE_KEYS.settings]: JSON.stringify({ version, data }) });
 
   it('round-trips audio settings in a version 2 envelope', () => {
@@ -122,6 +122,11 @@ describe('createStorage', () => {
       .toEqual(DEFAULT_AUDIO_SETTINGS);
     expect(createStorage(fakeBackend(settingsEntry(2, { volume: -3, voice: false }))).loadSettings())
       .toEqual({ ...DEFAULT_AUDIO_SETTINGS, volume: 0, voice: false });
+  });
+
+  it('adds the default beep level to version 2 settings saved without it', () => {
+    const saved = { volume: 60, beeps: false, voice: true, voiceStyle: 'intense', fanfare: false };
+    expect(createStorage(fakeBackend(settingsEntry(2, saved))).loadSettings()).toEqual({ ...saved, beepLevel: 60 });
   });
 
   it('returns a fresh settings object each time', () => {

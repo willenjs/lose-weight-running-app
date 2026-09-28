@@ -9,10 +9,10 @@ import { createCuePlayer } from '../platform/audio.js';
 import { speak, cancelSpeech } from '../platform/speech.js';
 import { createWakeLock } from '../platform/wakeLock.js';
 import { share, canShare } from '../platform/share.js';
-import { normalizeAudioSettings, isMuted, volumeLevel } from '../core/audioSettings.js';
+import { normalizeAudioSettings, isMuted, volumeLevel, testSequence } from '../core/audioSettings.js';
 import { coachExtras } from '../core/coach.js';
 
-export { VOLUME_PRESETS, VOICE_STYLES } from '../core/audioSettings.js';
+export { VOLUME_PRESETS, VOICE_STYLES, MIN_BEEP_LEVEL } from '../core/audioSettings.js';
 
 /** @typedef {import('../core/timer.js').Session} Session */
 
@@ -22,6 +22,8 @@ const TICK_MS = 250;
 // Lets the scheduled finish melody play before audio is torn down.
 const FINISH_AUDIO_GRACE_MS = 3000;
 const TOAST_MS = 2000;
+// Phase length used in the audio test's sample announcement.
+const TEST_PHASE_SECONDS = 5 * 60;
 
 const storage = createStorage();
 const cuePlayer = createCuePlayer();
@@ -42,6 +44,7 @@ export const app = $state({
   audioAvailable: true,
   settings: storage.loadSettings(),
   audioSheetOpen: false,
+  audioTesting: false,
   wakeLockActive: false,
   confirmingStop: false,
   /** @type {string | null} */
@@ -53,6 +56,9 @@ let ticker = null;
 let finishTimer = null;
 let lastPhaseIndex = -1;
 let toastTimer = null;
+let testTimer = null;
+// Bumped on each audio test so callbacks from an earlier test are ignored.
+let testRun = 0;
 
 export function init() {
   const savedLang = storage.loadLang();
@@ -173,13 +179,37 @@ export function setAudio(patch) {
 }
 
 /** Live slider feedback while dragging: no saving or re-scheduling until setAudio on release. */
-export function previewVolume(volume) {
-  app.settings = normalizeAudioSettings({ ...$state.snapshot(app.settings), volume });
+export function previewAudio(patch) {
+  app.settings = normalizeAudioSettings({ ...$state.snapshot(app.settings), ...patch });
 }
 
+/**
+ * Plays what a workout would, per the current settings: countdown and phase
+ * tone, a sample announcement, then the fanfare. Called from a tap.
+ */
 export function testAudio() {
-  cuePlayer.test(app.settings.volume);
-  say(t('audio.testPhrase'));
+  const run = ++testRun;
+  clearTimeout(testTimer);
+  const settings = $state.snapshot(app.settings);
+  const { lead, speak: withVoice, voiceExtras, tail } = testSequence(settings);
+  const endAfter = (ms) => {
+    testTimer = setTimeout(() => { if (run === testRun) app.audioTesting = false; }, ms);
+  };
+  const playTail = () => {
+    if (run === testRun) endAfter(cuePlayer.test(tail, settings));
+  };
+
+  app.audioTesting = true;
+  const leadMs = cuePlayer.test(lead, settings);
+  if (!withVoice) {
+    endAfter(leadMs);
+    return;
+  }
+  testTimer = setTimeout(() => {
+    if (run !== testRun) return;
+    const spoken = say(phaseLine('run', TEST_PHASE_SECONDS, voiceExtras), { onEnd: playTail });
+    if (!spoken) playTail();
+  }, leadMs);
 }
 
 export function audioMuted() {
@@ -305,21 +335,25 @@ function tick() {
 
 function announcePhase(workout, phaseIndex, remainingMs) {
   const phase = workout.phases[phaseIndex];
-  const command = t('cue.phase', {
-    phase: t(`phase.${phase.type}`),
-    duration: formatDuration(Math.round(remainingMs / 1000), app.lang),
-  });
-  const extras = coachExtras(workout, phaseIndex, app.settings.voiceStyle).map((key) => t(key));
-  say(extras.length ? `${command}. ${extras.join(' ')}` : command);
+  const extras = coachExtras(workout, phaseIndex, app.settings.voiceStyle);
+  say(phaseLine(phase.type, Math.round(remainingMs / 1000), extras));
+}
+
+/** "Walk for 5 minutes", followed by any coach lines (i18n keys). */
+function phaseLine(type, seconds, extraKeys) {
+  const command = t('cue.phase', { phase: t(`phase.${type}`), duration: formatDuration(seconds, app.lang) });
+  const extras = extraKeys.map((key) => t(key));
+  return extras.length ? `${command}. ${extras.join(' ')}` : command;
 }
 
 function canSpeak() {
   return app.settings.voice && !isMuted(app.settings);
 }
 
-function say(text) {
-  if (!canSpeak()) return;
-  speak(text, VOICE_LOCALES[app.lang], { volume: app.settings.volume });
+/** @param {{ onEnd?: () => void }} [options] @returns {boolean} whether speech started */
+function say(text, { onEnd } = {}) {
+  if (!canSpeak()) return false;
+  return speak(text, VOICE_LOCALES[app.lang], { volume: app.settings.volume, onEnd });
 }
 
 function finish(workout) {

@@ -118,8 +118,8 @@ describe('audio sheet and coach texts', () => {
   const keys = [
     'header.audio', 'audio.title', 'audio.subtitle', 'audio.close', 'audio.master',
     'audio.section', 'audio.beeps', 'audio.beepsHint', 'audio.voice', 'audio.voiceHint',
-    'audio.styleLabel', 'audio.fanfare', 'audio.fanfareHint', 'audio.test', 'audio.testPhrase',
-    'audio.save', 'run.beepsOnly',
+    'audio.styleLabel', 'audio.fanfare', 'audio.fanfareHint', 'audio.test',
+    'audio.save', 'run.beepsOnly', 'audio.beepLevel', 'audio.beepLevelHint',
     ...['off', 'low', 'normal', 'high'].map((level) => `audio.level.${level}`),
     ...VOLUME_PRESETS.map((preset) => `audio.preset.${preset}`),
     ...VOICE_STYLES.map((style) => `audio.style.${style}`),

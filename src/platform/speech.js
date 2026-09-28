@@ -18,11 +18,13 @@ function pickVoice(synth, locales) {
  * hold speech back, so the pre-scheduled beeps are the reliable cue there.
  * @param {string} text
  * @param {string[]} locales preferred voice locales, best first
- * @param {{ volume?: number }} [options] volume 0–100
+ * @param {{ volume?: number, onEnd?: () => void }} [options] volume 0–100;
+ *   onEnd runs when the utterance finishes, fails or is cancelled.
+ * @returns {boolean} whether speech was started (onEnd only runs if so)
  */
-export function speak(text, locales, { volume = 100 } = {}) {
+export function speak(text, locales, { volume = 100, onEnd } = {}) {
   const synth = globalThis.speechSynthesis;
-  if (!synth || document.visibilityState !== 'visible') return;
+  if (!synth || document.visibilityState !== 'visible') return false;
   synth.cancel();
   const utterance = new SpeechSynthesisUtterance(text);
   const voice = pickVoice(synth, locales);
@@ -30,7 +32,12 @@ export function speak(text, locales, { volume = 100 } = {}) {
   utterance.lang = voice?.lang ?? locales[0];
   utterance.rate = SPEECH_RATE;
   utterance.volume = Math.min(100, Math.max(0, volume)) / 100;
+  if (onEnd) {
+    utterance.onend = onEnd;
+    utterance.onerror = onEnd;
+  }
   synth.speak(utterance);
+  return true;
 }
 
 /** Stops any speech in progress (used when muting). */

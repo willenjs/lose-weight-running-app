@@ -1,16 +1,14 @@
 <script>
   import {
-    app, t, setAudio, previewVolume, testAudio, closeAudioSheet, volumeIcon, volumeLabel, voiceTag,
-    VOLUME_PRESETS, VOICE_STYLES,
+    app, t, setAudio, previewAudio, testAudio, closeAudioSheet, volumeIcon, volumeLabel, voiceTag,
+    VOLUME_PRESETS, VOICE_STYLES, MIN_BEEP_LEVEL,
   } from '../controller.svelte.js';
   import Icon from './Icon.svelte';
   import Switch from './Switch.svelte';
 
-  const TEST_ANIMATION_MS = 1600;
   const STYLE_ICONS = { intense: 'bolt', commands: 'bell' };
 
   const s = $derived(app.settings);
-  let testing = $state(false);
   /** @type {HTMLButtonElement | undefined} */
   let closeButton = $state();
 
@@ -24,12 +22,6 @@
 
   function onKeydown(event) {
     if (event.key === 'Escape') closeAudioSheet();
-  }
-
-  function runTest() {
-    testAudio();
-    testing = true;
-    setTimeout(() => { testing = false; }, TEST_ANIMATION_MS);
   }
 </script>
 
@@ -68,8 +60,27 @@
         value={s.volume}
         style="--fill: {s.volume}%"
         aria-label={t('audio.master')}
-        oninput={(event) => previewVolume(Number(event.currentTarget.value))}
+        oninput={(event) => previewAudio({ volume: Number(event.currentTarget.value) })}
         onchange={(event) => setAudio({ volume: Number(event.currentTarget.value) })}
+      />
+      <div class="beep-level">
+        <span class="beep-text">
+          <span class="label">{t('audio.beepLevel')}</span>
+          <span class="hint">{t('audio.beepLevelHint')}</span>
+        </span>
+        <span class="beep-readout num">{s.beepLevel}%</span>
+      </div>
+      <input
+        class="slider slider-small"
+        type="range"
+        min={MIN_BEEP_LEVEL}
+        max="100"
+        step="1"
+        value={s.beepLevel}
+        style="--fill: {((s.beepLevel - MIN_BEEP_LEVEL) / (100 - MIN_BEEP_LEVEL)) * 100}%"
+        aria-label={t('audio.beepLevel')}
+        oninput={(event) => previewAudio({ beepLevel: Number(event.currentTarget.value) })}
+        onchange={(event) => setAudio({ beepLevel: Number(event.currentTarget.value) })}
       />
       <div class="presets">
         {#each VOLUME_PRESETS as preset (preset)}
@@ -129,8 +140,8 @@
       </div>
     </section>
 
-    <button class="test" class:testing onclick={runTest}>
-      <span class="play"><Icon name={testing ? 'check' : 'play'} size={18} /></span>
+    <button class="test" class:testing={app.audioTesting} onclick={testAudio}>
+      <span class="play"><Icon name={app.audioTesting ? 'bolt' : 'play'} size={18} /></span>
       <span class="test-label">{t('audio.test')}</span>
       <span class="waves" aria-hidden="true">
         {#each [8, 16, 12, 20, 8] as height, i (i)}<span style="--h: {height}px; --i: {i}"></span>{/each}
@@ -241,6 +252,20 @@
   .slider::-moz-range-progress { height: 12px; border-radius: 9999px; background: var(--mint); }
   .slider::-moz-range-thumb { width: 28px; height: 28px; border: none; border-radius: 9999px; background: var(--mint); }
   .slider:focus-visible { outline: 2px solid var(--mint); outline-offset: 4px; border-radius: 8px; }
+
+  .beep-level { display: flex; align-items: center; gap: 10px; }
+  .beep-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .hint { font-size: 12px; color: var(--text-muted); }
+  .beep-readout { font-size: 18px; font-weight: 700; color: var(--walk); }
+  .slider-small { height: 36px; }
+  .slider-small::-webkit-slider-runnable-track {
+    height: 8px;
+    background: linear-gradient(to right, var(--walk) var(--fill), var(--surface-3) var(--fill));
+  }
+  .slider-small::-webkit-slider-thumb { width: 24px; height: 24px; margin-top: -8px; background: var(--walk); box-shadow: 0 0 0 6px rgb(0 210 255 / 0.15); }
+  .slider-small::-moz-range-track { height: 8px; }
+  .slider-small::-moz-range-progress { height: 8px; background: var(--walk); }
+  .slider-small::-moz-range-thumb { width: 24px; height: 24px; background: var(--walk); }
 
   .presets { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
   .preset {
