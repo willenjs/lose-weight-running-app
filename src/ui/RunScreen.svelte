@@ -33,7 +33,7 @@
         <span class="label phase-of">{t('run.phaseOf', { n: state.phaseIndex + 1, total: workout.phases.length })}</span>
         <span class="num elapsed">{formatClock(state.elapsedMs)} / {formatClock(totalSeconds(workout) * 1000)}</span>
       </div>
-      <PhaseBar {workout} currentIndex={state.phaseIndex} />
+      <PhaseBar {workout} currentIndex={state.phaseIndex} elapsedMs={state.elapsedMs} />
     </section>
 
     <section class="card main" class:paused={state.paused}>
