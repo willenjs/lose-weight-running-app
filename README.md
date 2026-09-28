@@ -31,7 +31,7 @@ The build uses relative paths, so it also works from any other static host.
 - `src/platform/` — browser adapters: Web Audio, speech, wake lock, localStorage, Web Share/clipboard.
 - `src/i18n/` — text resources (`pt.js` default, `en.js`).
 - `src/ui/` — Svelte 5 screens; `controller.svelte.js` holds app state and actions.
-- `image-sources/` — screenshots the workout plan was transcribed from.
+- `layout-target/` — design mockups (HTML, screenshots, design notes) the UI follows.
 - `docs/superpowers/` — design spec and implementation plan.
 
 ## How the timer stays accurate in the background

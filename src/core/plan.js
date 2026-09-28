@@ -14,7 +14,7 @@ function workout(week, day, phases) {
   return { id: `w${week}d${day}`, week, day, phases };
 }
 
-// Transcribed from the screenshots in image-sources/ (weekN-dayM.jpeg).
+// Transcribed from the program's original screenshots (weekN-dayM), not kept in the repo.
 /** @type {Workout[]} */
 export const PLAN = [
   workout(1, 1, [walk(6 * 60), jog(2 * 60), walk(6 * 60), jog(2 * 60), run(5 * 60)]),

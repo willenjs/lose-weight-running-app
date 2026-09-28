@@ -48,9 +48,12 @@ confirm both pass.
 - localStorage keys are `runningAssistant.*`, stored as
   `{ "version": 1, "data": ... }`. Bump the version and handle migration if
   the shape changes. Storage code must never throw.
-- Workout data in `src/core/plan.js` is transcribed from `image-sources/`;
-  `tests/core/plan.test.js` pins each total to its screenshot. Do not edit
-  the plan without a matching screenshot.
+- Workout data in `src/core/plan.js` was transcribed from the program's
+  original screenshots (no longer kept in the repo);
+  `tests/core/plan.test.js` pins each total. Do not edit the plan unless the
+  user supplies the new schedule.
+- `layout-target/` holds the design mockups (HTML, screenshots, design
+  notes) the UI follows. Reference only; it is not part of the build.
 
 ## Testing
 

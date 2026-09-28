@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { PLAN, findWorkout, totalSeconds, groupByWeek, phaseSeconds, phaseRole } from '../../src/core/plan.js';
 
-// Totals (in minutes) exactly as printed on each screenshot in image-sources/.
+// Totals (in minutes) exactly as printed on each original program screenshot.
 const SCREENSHOT_TOTALS = {
   w1d1: 21, w1d2: 23, w1d3: 23,
   w2d1: 21, w2d2: 23, w2d3: 21,
