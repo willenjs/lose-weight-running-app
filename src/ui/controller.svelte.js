@@ -9,10 +9,10 @@ import { createCuePlayer } from '../platform/audio.js';
 import { speak, cancelSpeech } from '../platform/speech.js';
 import { createWakeLock } from '../platform/wakeLock.js';
 import { share, canShare } from '../platform/share.js';
-import { normalizeAudioSettings, isMuted, volumeLevel, testSequence, activeCues } from '../core/audioSettings.js';
+import { normalizeAudioSettings, isMuted, testSequence, activeCues } from '../core/audioSettings.js';
 import { coachExtras } from '../core/coach.js';
 
-export { VOICE_STYLES, MIN_BEEP_LEVEL } from '../core/audioSettings.js';
+export { VOICE_STYLES } from '../core/audioSettings.js';
 
 /** @typedef {import('../core/timer.js').Session} Session */
 
@@ -216,9 +216,7 @@ export function audioMuted() {
 }
 
 export function volumeIcon() {
-  const level = volumeLevel(app.settings.volume);
-  if (level === 'off') return 'speaker-off';
-  return level === 'low' ? 'speaker-low' : 'speaker';
+  return isMuted(app.settings) ? 'speaker-off' : 'speaker';
 }
 
 /** Run screen audio chip, e.g. "Beeps + Voice + Fanfare"; null when nothing plays. */
@@ -233,10 +231,6 @@ export function cuesSentence() {
   if (!cues.length) return null;
   const items = ['voice', 'beeps', 'fanfare'].filter((cue) => cues.includes(cue)).map((cue) => t(`workout.cue.${cue}`));
   return t('workout.audioOn', { list: formatList(items, app.lang) });
-}
-
-export function volumeLabel() {
-  return t(`audio.level.${volumeLevel(app.settings.volume)}`);
 }
 
 /** Voice language tag shown next to the voice coach, e.g. "PT-BR". */
@@ -360,13 +354,13 @@ function phaseLine(type, seconds, extraKeys) {
 }
 
 function canSpeak() {
-  return app.settings.voice && !isMuted(app.settings);
+  return app.settings.voiceVolume > 0;
 }
 
 /** @param {{ onEnd?: () => void }} [options] @returns {boolean} whether speech started */
 function say(text, { onEnd } = {}) {
   if (!canSpeak()) return false;
-  return speak(text, VOICE_LOCALES[app.lang], { volume: app.settings.volume, onEnd });
+  return speak(text, VOICE_LOCALES[app.lang], { volume: app.settings.voiceVolume, onEnd });
 }
 
 function finish(workout) {

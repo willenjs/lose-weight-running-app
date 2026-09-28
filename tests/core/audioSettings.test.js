@@ -1,13 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import {
-  DEFAULT_AUDIO_SETTINGS, VOICE_STYLES, MIN_BEEP_LEVEL,
-  normalizeAudioSettings, volumeLevel, isMuted, testSequence, activeCues,
+  DEFAULT_AUDIO_SETTINGS, VOICE_STYLES,
+  normalizeAudioSettings, migrateAudioSettings, isMuted, testSequence, activeCues,
 } from '../../src/core/audioSettings.js';
 
 describe('audio settings defaults', () => {
-  it('keep today\'s behavior: full volume, everything on, plain commands', () => {
+  it('have full voice, softer beeps and fanfare, plain commands', () => {
     expect(DEFAULT_AUDIO_SETTINGS).toEqual({
-      volume: 100, beepLevel: 60, beeps: true, voice: true, voiceStyle: 'commands', fanfare: true,
+      voiceVolume: 100, beepVolume: 60, fanfareVolume: 60, voiceStyle: 'commands',
     });
     expect(Object.isFrozen(DEFAULT_AUDIO_SETTINGS)).toBe(true);
   });
@@ -27,64 +27,63 @@ describe('normalizeAudioSettings', () => {
   });
 
   it('keeps valid fields and fills missing ones from the defaults', () => {
-    expect(normalizeAudioSettings({ volume: 40, voice: false })).toEqual({
-      volume: 40, beepLevel: 60, beeps: true, voice: false, voiceStyle: 'commands', fanfare: true,
-    });
-    expect(normalizeAudioSettings({ voiceStyle: 'intense', beeps: false, fanfare: false })).toEqual({
-      volume: 100, beepLevel: 60, beeps: false, voice: true, voiceStyle: 'intense', fanfare: false,
+    expect(normalizeAudioSettings({ voiceVolume: 40, voiceStyle: 'intense' })).toEqual({
+      voiceVolume: 40, beepVolume: 60, fanfareVolume: 60, voiceStyle: 'intense',
     });
   });
 
-  it('clamps and rounds the volume, and accepts numeric strings from range inputs', () => {
-    expect(normalizeAudioSettings({ volume: 150 }).volume).toBe(100);
-    expect(normalizeAudioSettings({ volume: -3 }).volume).toBe(0);
-    expect(normalizeAudioSettings({ volume: 42.6 }).volume).toBe(43);
-    expect(normalizeAudioSettings({ volume: '50' }).volume).toBe(50);
+  it('clamps and rounds every volume, and accepts numeric strings from range inputs', () => {
+    expect(normalizeAudioSettings({ voiceVolume: 150, beepVolume: -3, fanfareVolume: 42.6 })).toEqual({
+      voiceVolume: 100, beepVolume: 0, fanfareVolume: 43, voiceStyle: 'commands',
+    });
+    expect(normalizeAudioSettings({ beepVolume: '50' }).beepVolume).toBe(50);
   });
 
   it('replaces invalid fields with the defaults', () => {
     expect(normalizeAudioSettings({
-      volume: 'loud', beeps: 'yes', voice: 1, voiceStyle: 'shouty', fanfare: null,
+      voiceVolume: 'loud', beepVolume: Number.NaN, fanfareVolume: '', voiceStyle: 'shouty',
     })).toEqual(DEFAULT_AUDIO_SETTINGS);
-    expect(normalizeAudioSettings({ volume: Number.NaN }).volume).toBe(100);
-    expect(normalizeAudioSettings({ volume: '' }).volume).toBe(100);
   });
 });
 
-describe('volumeLevel', () => {
-  it('names the level shown under the slider', () => {
-    expect(volumeLevel(0)).toBe('off');
-    expect(volumeLevel(1)).toBe('low');
-    expect(volumeLevel(39)).toBe('low');
-    expect(volumeLevel(40)).toBe('normal');
-    expect(volumeLevel(84)).toBe('normal');
-    expect(volumeLevel(85)).toBe('high');
-    expect(volumeLevel(100)).toBe('high');
+describe('migrateAudioSettings', () => {
+  it('turns v1 { muted } into all volumes 0, or the defaults', () => {
+    expect(migrateAudioSettings(1, { muted: true })).toEqual({ voiceVolume: 0, beepVolume: 0, fanfareVolume: 0, voiceStyle: 'commands' });
+    expect(migrateAudioSettings(1, { muted: false })).toEqual(DEFAULT_AUDIO_SETTINGS);
+  });
+
+  it('keeps what a v2 user heard: master volume × beep level for tones, switches as 0', () => {
+    expect(migrateAudioSettings(2, {
+      volume: 80, beepLevel: 50, beeps: true, voice: true, voiceStyle: 'intense', fanfare: true,
+    })).toEqual({ voiceVolume: 80, beepVolume: 40, fanfareVolume: 40, voiceStyle: 'intense' });
+    expect(migrateAudioSettings(2, {
+      volume: 100, beeps: false, voice: false, voiceStyle: 'commands', fanfare: false,
+    })).toEqual({ voiceVolume: 0, beepVolume: 60, fanfareVolume: 0, voiceStyle: 'commands' });
+  });
+
+  it('returns undefined for anything it cannot read', () => {
+    expect(migrateAudioSettings(1, { muted: 'yes' })).toBeUndefined();
+    expect(migrateAudioSettings(2, 'loud')).toBeUndefined();
+    expect(migrateAudioSettings(99, {})).toBeUndefined();
   });
 });
 
 describe('isMuted', () => {
-  it('is true only at volume 0', () => {
-    expect(isMuted({ ...DEFAULT_AUDIO_SETTINGS, volume: 0 })).toBe(true);
-    expect(isMuted({ ...DEFAULT_AUDIO_SETTINGS, volume: 1 })).toBe(false);
-    expect(isMuted({ ...DEFAULT_AUDIO_SETTINGS, beeps: false, voice: false, fanfare: false })).toBe(false);
+  it('is true only when every volume is 0', () => {
+    const off = { voiceVolume: 0, beepVolume: 0, fanfareVolume: 0, voiceStyle: 'commands' };
+    expect(isMuted(off)).toBe(true);
+    expect(isMuted({ ...off, fanfareVolume: 1 })).toBe(false);
   });
 });
 
-describe('beep level', () => {
-  it('fills a missing level from the default (settings saved before it existed)', () => {
-    expect(normalizeAudioSettings({ volume: 80, beeps: true }).beepLevel).toBe(60);
-  });
+describe('activeCues', () => {
+  const all = { ...DEFAULT_AUDIO_SETTINGS };
 
-  it('clamps to 0..100, rounds and accepts numeric strings', () => {
-    expect(MIN_BEEP_LEVEL).toBe(0);
-    expect(normalizeAudioSettings({ beepLevel: 10 }).beepLevel).toBe(10);
-    expect(normalizeAudioSettings({ beepLevel: 0 }).beepLevel).toBe(0);
-    expect(normalizeAudioSettings({ beepLevel: -5 }).beepLevel).toBe(0);
-    expect(normalizeAudioSettings({ beepLevel: 130 }).beepLevel).toBe(100);
-    expect(normalizeAudioSettings({ beepLevel: 44.4 }).beepLevel).toBe(44);
-    expect(normalizeAudioSettings({ beepLevel: '75' }).beepLevel).toBe(75);
-    expect(normalizeAudioSettings({ beepLevel: 'loud' }).beepLevel).toBe(60);
+  it('lists every cue with some volume, in a fixed order', () => {
+    expect(activeCues(all)).toEqual(['beeps', 'voice', 'fanfare']);
+    expect(activeCues({ ...all, voiceVolume: 0 })).toEqual(['beeps', 'fanfare']);
+    expect(activeCues({ ...all, beepVolume: 0, fanfareVolume: 0 })).toEqual(['voice']);
+    expect(activeCues({ ...all, voiceVolume: 0, beepVolume: 0, fanfareVolume: 0 })).toEqual([]);
   });
 });
 
@@ -97,44 +96,24 @@ describe('testSequence', () => {
     });
   });
 
-  it('leaves the countdown out when beeps are off', () => {
-    expect(testSequence({ ...all, beeps: false }).lead).toEqual([]);
-    expect(testSequence({ ...all, beeps: false, voice: false }).lead).toEqual(['run', 'finish']);
-  });
-
-  it('leaves the fanfare out when it is off', () => {
-    expect(testSequence({ ...all, fanfare: false }).tail).toEqual([]);
-  });
-
-  it('plays the fanfare right after the tones when the voice is off', () => {
-    expect(testSequence({ ...all, voice: false })).toEqual({
+  it('plays the phase tone and the fanfare back to back when the voice is at 0%', () => {
+    expect(testSequence({ ...all, voiceVolume: 0 })).toEqual({
       lead: ['pip', 'pip', 'lastPip', 'run', 'finish'], speak: false, voiceExtras: [], tail: [],
     });
+  });
+
+  it('leaves out the tones at 0% beeps and the fanfare at 0% fanfare', () => {
+    expect(testSequence({ ...all, beepVolume: 0 }).lead).toEqual([]);
+    expect(testSequence({ ...all, fanfareVolume: 0 }).tail).toEqual([]);
+    expect(testSequence({ ...all, voiceVolume: 0, beepVolume: 0 }).lead).toEqual(['finish']);
   });
 
   it('adds the intense coach line to the sample announcement', () => {
     expect(testSequence({ ...all, voiceStyle: 'intense' }).voiceExtras).toEqual(['coach.run']);
   });
 
-  it('plays nothing at volume 0', () => {
-    expect(testSequence({ ...all, volume: 0 })).toEqual({ lead: [], speak: false, voiceExtras: [], tail: [] });
-  });
-});
-
-describe('activeCues', () => {
-  const all = { ...DEFAULT_AUDIO_SETTINGS };
-
-  it('lists every cue that is switched on, in a fixed order', () => {
-    expect(activeCues(all)).toEqual(['beeps', 'voice', 'fanfare']);
-    expect(activeCues({ ...all, voice: false })).toEqual(['beeps', 'fanfare']);
-    expect(activeCues({ ...all, beeps: false, fanfare: false })).toEqual(['voice']);
-  });
-
-  it('is empty at 0% volume, whatever is switched on', () => {
-    expect(activeCues({ ...all, volume: 0 })).toEqual([]);
-  });
-
-  it('drops the tones (beeps, fanfare) at 0% beep level but keeps the voice', () => {
-    expect(activeCues({ ...all, beepLevel: 0 })).toEqual(['voice']);
+  it('plays nothing when every volume is 0', () => {
+    expect(testSequence({ ...all, voiceVolume: 0, beepVolume: 0, fanfareVolume: 0 }))
+      .toEqual({ lead: [], speak: false, voiceExtras: [], tail: [] });
   });
 });

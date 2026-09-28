@@ -116,17 +116,21 @@ describe('Spanish', () => {
 
 describe('audio sheet and coach texts', () => {
   const keys = [
-    'header.audio', 'audio.title', 'audio.subtitle', 'audio.close', 'audio.master',
-    'audio.section', 'audio.beeps', 'audio.beepsHint', 'audio.voice', 'audio.voiceHint',
-    'audio.styleLabel', 'audio.fanfare', 'audio.fanfareHint', 'audio.test',
-    'audio.save', 'workout.audioOn', 'workout.cue.voice', 'workout.cue.beeps', 'workout.cue.fanfare', 'run.cue.beeps', 'run.cue.voice', 'run.cue.fanfare', 'audio.beepLevel', 'audio.beepLevelHint',
-    ...['off', 'low', 'normal', 'high'].map((level) => `audio.level.${level}`),
+    'header.audio', 'audio.title', 'audio.subtitle', 'audio.close',
+    'audio.beeps', 'audio.beepsHint', 'audio.voice', 'audio.voiceHint',
+    'audio.styleLabel', 'audio.fanfare', 'audio.fanfareHint', 'audio.test', 'audio.save',
+    'workout.audioOn', 'workout.cue.voice', 'workout.cue.beeps', 'workout.cue.fanfare',
+    'run.cue.beeps', 'run.cue.voice', 'run.cue.fanfare',
     ...VOICE_STYLES.map((style) => `audio.style.${style}`),
     ...['walk', 'jog', 'run', 'halfway', 'last'].map((line) => `coach.${line}`),
   ];
 
   it('exist in the default language', () => {
     for (const key of keys) expect(pt[key], key).toBeTruthy();
+  });
+
+  it('drop the master volume texts', () => {
+    for (const key of ['audio.master', 'audio.section', 'audio.beepLevel', 'audio.level.off']) expect(pt[key], key).toBeUndefined();
   });
 
   it('end coach lines with punctuation so they can be joined into one utterance', () => {

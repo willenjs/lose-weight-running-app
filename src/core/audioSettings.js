@@ -1,44 +1,35 @@
 /** @typedef {'commands' | 'intense'} VoiceStyle */
 /**
  * @typedef {{
- *   volume: number,
- *   beepLevel: number,
- *   beeps: boolean,
- *   voice: boolean,
+ *   voiceVolume: number,
+ *   beepVolume: number,
+ *   fanfareVolume: number,
  *   voiceStyle: VoiceStyle,
- *   fanfare: boolean,
  * }} AudioSettings
- * volume: 0–100, where 100 is the loudest the app plays.
- * beepLevel: MIN_BEEP_LEVEL–100, tone loudness relative to the volume. Speech
- *   cannot be made louder, so this is how beeps are matched to a quiet voice.
- * beeps: the 3-2-1 countdown before each phase change.
- * voice: spoken phase announcements.
- * fanfare: the finish melody.
+ * Volumes are 0–100; 0 turns that sound off.
+ * voiceVolume: spoken phase announcements.
+ * beepVolume: the 3-2-1 countdown and the phase-start tones.
+ * fanfareVolume: the finish melody.
  */
 
 /** @type {Readonly<AudioSettings>} */
 export const DEFAULT_AUDIO_SETTINGS = Object.freeze({
-  volume: 100,
-  beepLevel: 60,
-  beeps: true,
-  voice: true,
+  voiceVolume: 100,
+  beepVolume: 60,
+  fanfareVolume: 60,
   voiceStyle: 'commands',
-  fanfare: true,
 });
-
-export const MIN_BEEP_LEVEL = 0;
 
 /** @type {VoiceStyle[]} */
 export const VOICE_STYLES = ['intense', 'commands'];
 
 const isObject = (value) => typeof value === 'object' && value !== null && !Array.isArray(value);
-const bool = (value, fallback) => (typeof value === 'boolean' ? value : fallback);
 
 /** Range inputs report their value as a string, so numeric strings count. */
-function toPercent(value, min = 0) {
+function toPercent(value) {
   const n = typeof value === 'string' ? Number.parseFloat(value) : value;
   if (typeof n !== 'number' || !Number.isFinite(n)) return null;
-  return Math.round(Math.min(100, Math.max(min, n)));
+  return Math.round(Math.min(100, Math.max(0, n)));
 }
 
 /**
@@ -49,26 +40,52 @@ export function normalizeAudioSettings(value) {
   const input = isObject(value) ? value : {};
   const d = DEFAULT_AUDIO_SETTINGS;
   return {
-    volume: toPercent(input.volume) ?? d.volume,
-    beepLevel: toPercent(input.beepLevel, MIN_BEEP_LEVEL) ?? d.beepLevel,
-    beeps: bool(input.beeps, d.beeps),
-    voice: bool(input.voice, d.voice),
+    voiceVolume: toPercent(input.voiceVolume) ?? d.voiceVolume,
+    beepVolume: toPercent(input.beepVolume) ?? d.beepVolume,
+    fanfareVolume: toPercent(input.fanfareVolume) ?? d.fanfareVolume,
     voiceStyle: VOICE_STYLES.includes(input.voiceStyle) ? input.voiceStyle : d.voiceStyle,
-    fanfare: bool(input.fanfare, d.fanfare),
   };
 }
 
-/** @returns {'off' | 'low' | 'normal' | 'high'} */
-export function volumeLevel(volume) {
-  if (volume <= 0) return 'off';
-  if (volume < 40) return 'low';
-  if (volume < 85) return 'normal';
-  return 'high';
+/**
+ * Settings saved by older versions, in the current shape (undefined if unreadable).
+ * v1: { muted }. v2: a master volume, a beep level (% of it) and on/off switches;
+ * tones played at volume × beep level, so that becomes the beep and fanfare volume.
+ * @returns {AudioSettings | undefined}
+ */
+export function migrateAudioSettings(version, data) {
+  if (!isObject(data)) return undefined;
+  if (version === 1) {
+    if (typeof data.muted !== 'boolean') return undefined;
+    if (!data.muted) return { ...DEFAULT_AUDIO_SETTINGS };
+    return { ...DEFAULT_AUDIO_SETTINGS, voiceVolume: 0, beepVolume: 0, fanfareVolume: 0 };
+  }
+  if (version === 2) {
+    const volume = toPercent(data.volume) ?? 100;
+    const tones = Math.round((volume * (toPercent(data.beepLevel) ?? 60)) / 100);
+    return normalizeAudioSettings({
+      voiceVolume: data.voice === false ? 0 : volume,
+      beepVolume: tones,
+      fanfareVolume: data.fanfare === false ? 0 : tones,
+      voiceStyle: data.voiceStyle,
+    });
+  }
+  return undefined;
+}
+
+/**
+ * The sounds a runner will actually hear, for the run chip and workout note.
+ * @param {AudioSettings} settings
+ * @returns {('beeps' | 'voice' | 'fanfare')[]}
+ */
+export function activeCues(settings) {
+  const on = { beeps: settings.beepVolume > 0, voice: settings.voiceVolume > 0, fanfare: settings.fanfareVolume > 0 };
+  return /** @type {const} */ (['beeps', 'voice', 'fanfare']).filter((cue) => on[cue]);
 }
 
 /** @param {AudioSettings} settings */
 export function isMuted(settings) {
-  return settings.volume === 0;
+  return activeCues(settings).length === 0;
 }
 
 /** @typedef {import('./cues.js').CueKind} CueKind */
@@ -82,26 +99,16 @@ export function isMuted(settings) {
  * @returns {{ lead: CueKind[], speak: boolean, voiceExtras: string[], tail: CueKind[] }}
  */
 export function testSequence(settings) {
-  if (isMuted(settings)) return { lead: [], speak: false, voiceExtras: [], tail: [] };
+  const beeps = settings.beepVolume > 0;
   /** @type {CueKind[]} */
-  const countdown = settings.beeps ? ['pip', 'pip', 'lastPip'] : [];
+  const countdown = beeps ? ['pip', 'pip', 'lastPip'] : [];
   /** @type {CueKind[]} */
-  const tail = settings.fanfare ? ['finish'] : [];
-  if (!settings.voice) return { lead: [...countdown, 'run', ...tail], speak: false, voiceExtras: [], tail: [] };
-  const lead = countdown;
+  const tail = settings.fanfareVolume > 0 ? ['finish'] : [];
+  if (settings.voiceVolume === 0) {
+    /** @type {CueKind[]} */
+    const phaseTone = beeps ? ['run'] : [];
+    return { lead: [...countdown, ...phaseTone, ...tail], speak: false, voiceExtras: [], tail: [] };
+  }
   const voiceExtras = settings.voiceStyle === 'intense' ? ['coach.run'] : [];
-  return { lead, speak: true, voiceExtras, tail };
-}
-
-/**
- * The cues a runner will actually hear, for the run screen's audio chip.
- * Nothing at 0% volume; tones (beeps, fanfare) drop out at 0% beep level.
- * @param {AudioSettings} settings
- * @returns {('beeps' | 'voice' | 'fanfare')[]}
- */
-export function activeCues(settings) {
-  if (isMuted(settings)) return [];
-  const tones = settings.beepLevel > 0;
-  const on = { beeps: settings.beeps && tones, voice: settings.voice, fanfare: settings.fanfare && tones };
-  return /** @type {const} */ (['beeps', 'voice', 'fanfare']).filter((cue) => on[cue]);
+  return { lead: countdown, speak: true, voiceExtras, tail };
 }

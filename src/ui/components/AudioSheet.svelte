@@ -1,10 +1,9 @@
 <script>
   import {
-    app, t, setAudio, previewAudio, testAudio, closeAudioSheet, volumeIcon, volumeLabel, voiceTag,
-    VOICE_STYLES, MIN_BEEP_LEVEL,
+    app, t, setAudio, testAudio, closeAudioSheet, voiceTag, VOICE_STYLES,
   } from '../controller.svelte.js';
   import Icon from './Icon.svelte';
-  import Switch from './Switch.svelte';
+  import VolumeRow from './VolumeRow.svelte';
 
   const STYLE_ICONS = { intense: 'bolt', commands: 'bell' };
 
@@ -42,95 +41,25 @@
       </button>
     </header>
 
-    <section class="panel">
-      <div class="master">
-        <span class="tile tone-mint"><Icon name={volumeIcon()} /></span>
-        <span class="master-text">
-          <span class="label">{t('audio.master')}</span>
-          <span class="level">{volumeLabel()}</span>
-        </span>
-        <span class="readout num">{s.volume}<small>%</small></span>
-      </div>
-      <input
-        class="slider"
-        type="range"
-        min="0"
-        max="100"
-        step="1"
-        value={s.volume}
-        style="--fill: {s.volume}%"
-        aria-label={t('audio.master')}
-        oninput={(event) => previewAudio({ volume: Number(event.currentTarget.value) })}
-        onchange={(event) => setAudio({ volume: Number(event.currentTarget.value) })}
-      />
-      <div class="beep-level">
-        <span class="beep-text">
-          <span class="label">{t('audio.beepLevel')}</span>
-          <span class="hint">{t('audio.beepLevelHint')}</span>
-        </span>
-        <span class="beep-readout num">{s.beepLevel}%</span>
-      </div>
-      <input
-        class="slider slider-small"
-        type="range"
-        min={MIN_BEEP_LEVEL}
-        max="100"
-        step="1"
-        value={s.beepLevel}
-        style="--fill: {((s.beepLevel - MIN_BEEP_LEVEL) / (100 - MIN_BEEP_LEVEL)) * 100}%"
-        aria-label={t('audio.beepLevel')}
-        oninput={(event) => previewAudio({ beepLevel: Number(event.currentTarget.value) })}
-        onchange={(event) => setAudio({ beepLevel: Number(event.currentTarget.value) })}
-      />
-    </section>
-
-    <p class="label section-label">{t('audio.section')}</p>
-
-    <section class="row-card">
-      <div class="row">
-        <span class="tile tone-walk"><Icon name="timer" size={22} /></span>
-        <span class="row-text">
-          <strong>{t('audio.beeps')}</strong>
-          <span>{t('audio.beepsHint')}</span>
-        </span>
-        <Switch checked={s.beeps} label={t('audio.beeps')} onchange={(beeps) => setAudio({ beeps })} />
-      </div>
-    </section>
-
-    <section class="row-card">
-      <div class="row">
-        <span class="tile tone-mint"><Icon name="voice" size={22} /></span>
-        <span class="row-text">
-          <strong>{t('audio.voice')} <span class="lang-tag">{voiceTag()}</span></strong>
-          <span>{t('audio.voiceHint')}</span>
-        </span>
-        <Switch checked={s.voice} label={t('audio.voice')} onchange={(voice) => setAudio({ voice })} />
-      </div>
+    <VolumeRow field="voiceVolume" icon="voice" accent="var(--mint)" title={t('audio.voice')} hint={t('audio.voiceHint')} tag={voiceTag()}>
       <div class="styles" role="group" aria-label={t('audio.styleLabel')}>
         {#each VOICE_STYLES as style (style)}
           <button
             class="style"
             class:active={s.voiceStyle === style}
             aria-pressed={s.voiceStyle === style}
-            disabled={!s.voice}
+            disabled={s.voiceVolume === 0}
             onclick={() => setAudio({ voiceStyle: style })}
           >
             <Icon name={STYLE_ICONS[style]} size={16} />{t(`audio.style.${style}`)}
           </button>
         {/each}
       </div>
-    </section>
+    </VolumeRow>
 
-    <section class="row-card">
-      <div class="row">
-        <span class="tile tone-run"><Icon name="trophy" size={22} /></span>
-        <span class="row-text">
-          <strong>{t('audio.fanfare')}</strong>
-          <span>{t('audio.fanfareHint')}</span>
-        </span>
-        <Switch checked={s.fanfare} label={t('audio.fanfare')} onchange={(fanfare) => setAudio({ fanfare })} />
-      </div>
-    </section>
+    <VolumeRow field="beepVolume" icon="timer" accent="var(--walk)" title={t('audio.beeps')} hint={t('audio.beepsHint')} />
+
+    <VolumeRow field="fanfareVolume" icon="trophy" accent="var(--run)" title={t('audio.fanfare')} hint={t('audio.fanfareHint')} />
 
     <button class="test" class:testing={app.audioTesting} onclick={testAudio}>
       <span class="play"><Icon name={app.audioTesting ? 'bolt' : 'play'} size={18} /></span>
@@ -197,87 +126,6 @@
     background: var(--surface-2);
   }
   .round:active { background: var(--surface-3); }
-
-  .panel, .row-card {
-    flex: none;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    padding: 16px;
-    border-radius: var(--radius);
-    background: var(--surface-2);
-  }
-  .tile {
-    flex: none;
-    width: 44px;
-    height: 44px;
-    display: grid;
-    place-items: center;
-    border-radius: 12px;
-  }
-  .tone-mint { background: var(--mint-soft); color: var(--mint); }
-  .tone-walk { background: rgb(0 210 255 / 0.15); color: var(--walk); }
-  .tone-run { background: rgb(255 51 75 / 0.15); color: var(--run); }
-
-  .master { display: flex; align-items: center; gap: 10px; }
-  .master-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-  .level { font-size: 13px; font-weight: 600; color: var(--mint); }
-  .readout { font-size: 32px; font-weight: 700; color: var(--mint); }
-  .readout small { font-size: 14px; margin-left: 2px; }
-
-  .slider { width: 100%; height: 44px; margin: 0; appearance: none; -webkit-appearance: none; background: transparent; }
-  .slider::-webkit-slider-runnable-track {
-    height: 12px;
-    border-radius: 9999px;
-    background: linear-gradient(to right, var(--mint) var(--fill), var(--surface-3) var(--fill));
-  }
-  .slider::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 28px;
-    height: 28px;
-    margin-top: -8px;
-    border-radius: 9999px;
-    background: var(--mint);
-    box-shadow: 0 0 0 6px var(--mint-soft);
-  }
-  .slider::-moz-range-track { height: 12px; border-radius: 9999px; background: var(--surface-3); }
-  .slider::-moz-range-progress { height: 12px; border-radius: 9999px; background: var(--mint); }
-  .slider::-moz-range-thumb { width: 28px; height: 28px; border: none; border-radius: 9999px; background: var(--mint); }
-  .slider:focus-visible { outline: 2px solid var(--mint); outline-offset: 4px; border-radius: 8px; }
-
-  .beep-level { display: flex; align-items: center; gap: 10px; }
-  .beep-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-  .hint { font-size: 12px; color: var(--text-muted); }
-  .beep-readout { font-size: 18px; font-weight: 700; color: var(--walk); }
-  .slider-small { height: 36px; }
-  .slider-small::-webkit-slider-runnable-track {
-    height: 8px;
-    background: linear-gradient(to right, var(--walk) var(--fill), var(--surface-3) var(--fill));
-  }
-  .slider-small::-webkit-slider-thumb { width: 24px; height: 24px; margin-top: -8px; background: var(--walk); box-shadow: 0 0 0 6px rgb(0 210 255 / 0.15); }
-  .slider-small::-moz-range-track { height: 8px; }
-  .slider-small::-moz-range-progress { height: 8px; background: var(--walk); }
-  .slider-small::-moz-range-thumb { width: 24px; height: 24px; background: var(--walk); }
-
-
-  .section-label { padding: 4px 4px 0; }
-
-  .row { display: flex; align-items: center; gap: 12px; }
-  .row-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-  .row-text strong { font-size: 17px; line-height: 1.25; }
-  .row-text > span { font-size: 13px; color: var(--text-muted); }
-  .lang-tag {
-    display: inline-block;
-    padding: 2px 6px;
-    border-radius: var(--radius-sm);
-    background: var(--surface-3);
-    color: var(--walk);
-    font-family: var(--display-font);
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.1em;
-    vertical-align: middle;
-  }
 
   .styles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .style {

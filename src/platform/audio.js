@@ -1,4 +1,4 @@
-import { upcomingCues, filterCues } from '../core/cues.js';
+import { upcomingCues, filterCues, cueVolume } from '../core/cues.js';
 import { DEFAULT_AUDIO_SETTINGS } from '../core/audioSettings.js';
 
 // `at` (offset from the cue) and `dur` are in seconds, matching AudioContext time.
@@ -38,11 +38,13 @@ const lengthOf = (notes) => Math.max(...notes.map((n) => n.at + n.dur));
 
 // Triangle waves stay full-sounding near maximum volume without the harshness of square waves.
 const WAVE = 'triangle';
-// Gain at 100% volume and beep level; both scale it down linearly.
+// Gain at 100% volume; each sound's volume scales it down linearly.
 const MAX_GAIN = 0.95;
-const percent = (value) => Math.min(100, Math.max(0, value)) / 100;
-/** @param {{ volume: number, beepLevel: number }} settings */
-const gainFor = ({ volume, beepLevel }) => MAX_GAIN * percent(volume) * percent(beepLevel);
+/**
+ * @param {import('../core/cues.js').CueKind} kind
+ * @param {{ beepVolume: number, fanfareVolume: number }} settings
+ */
+const gainFor = (kind, settings) => (MAX_GAIN * Math.min(100, Math.max(0, cueVolume(kind, settings)))) / 100;
 // Quiet enough to be inaudible, loud enough for Chrome to treat the tab as
 // "playing audio", which exempts it from intensive background throttling.
 const KEEP_ALIVE_VOLUME = 0.001;
@@ -106,8 +108,8 @@ export function createCuePlayer() {
       stop();
       ensureContext();
       const base = ctx.currentTime;
-      const level = gainFor(settings);
       for (const cue of filterCues(upcomingCues(session, workout, now), settings)) {
+        const level = gainFor(cue.kind, settings);
         for (const n of TONES[cue.kind]) note(n.freq, base + cue.inMs / 1000 + n.at, n.dur, level);
       }
       oscillator(KEEP_ALIVE_FREQ, KEEP_ALIVE_VOLUME).osc.start(base);
@@ -121,17 +123,17 @@ export function createCuePlayer() {
    * Plays the given cue kinds one after another, starting now. The first call
    * must come from a user gesture (it may create the AudioContext).
    * @param {import('../core/cues.js').CueKind[]} kinds
-   * @param {{ volume: number, beepLevel: number }} settings
+   * @param {{ beepVolume: number, fanfareVolume: number }} settings
    * @returns {number} how long the tones take, in ms (0 when nothing plays)
    */
   function test(kinds, settings) {
     if (!AudioContextClass || kinds.length === 0) return 0;
     try {
       ensureContext();
-      const level = gainFor(settings);
       let at = ctx.currentTime + 0.05;
       const start = at;
       for (const kind of kinds) {
+        const level = gainFor(kind, settings);
         for (const n of TONES[kind]) note(n.freq, at + n.at, n.dur, level);
         at += lengthOf(TONES[kind]) + TEST_GAP_S;
       }

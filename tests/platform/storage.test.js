@@ -83,15 +83,15 @@ describe('createStorage', () => {
     expect(storage.loadLang()).toBeNull();
   });
 
-  const audio = { volume: 60, beepLevel: 40, beeps: false, voice: true, voiceStyle: 'intense', fanfare: false };
+  const audio = { voiceVolume: 70, beepVolume: 40, fanfareVolume: 0, voiceStyle: 'intense' };
   const settingsEntry = (version, data) => ({ [STORAGE_KEYS.settings]: JSON.stringify({ version, data }) });
 
-  it('round-trips audio settings in a version 2 envelope', () => {
+  it('round-trips audio settings in a version 3 envelope', () => {
     const backend = fakeBackend();
     const storage = createStorage(backend);
     storage.saveSettings(audio);
     expect(storage.loadSettings()).toEqual(audio);
-    expect(JSON.parse(backend.data.get('runningAssistant.settings'))).toEqual({ version: 2, data: audio });
+    expect(JSON.parse(backend.data.get('runningAssistant.settings'))).toEqual({ version: 3, data: audio });
   });
 
   it('keeps other keys on version 1', () => {
@@ -102,38 +102,32 @@ describe('createStorage', () => {
     expect(JSON.parse(backend.data.get('runningAssistant.lang')).version).toBe(1);
   });
 
-  it('migrates version 1 { muted } settings', () => {
+  it('migrates version 1 and version 2 settings', () => {
     expect(createStorage(fakeBackend(settingsEntry(1, { muted: true }))).loadSettings())
-      .toEqual({ ...DEFAULT_AUDIO_SETTINGS, volume: 0 });
-    expect(createStorage(fakeBackend(settingsEntry(1, { muted: false }))).loadSettings())
-      .toEqual(DEFAULT_AUDIO_SETTINGS);
+      .toEqual({ voiceVolume: 0, beepVolume: 0, fanfareVolume: 0, voiceStyle: 'commands' });
+    expect(createStorage(fakeBackend(settingsEntry(2, {
+      volume: 80, beepLevel: 50, beeps: true, voice: true, voiceStyle: 'intense', fanfare: false,
+    }))).loadSettings()).toEqual({ voiceVolume: 80, beepVolume: 40, fanfareVolume: 0, voiceStyle: 'intense' });
   });
 
   it('defaults audio settings when missing, unknown version or malformed', () => {
     expect(createStorage(fakeBackend()).loadSettings()).toEqual(DEFAULT_AUDIO_SETTINGS);
     expect(createStorage(fakeBackend(settingsEntry(99, audio))).loadSettings()).toEqual(DEFAULT_AUDIO_SETTINGS);
     expect(createStorage(fakeBackend(settingsEntry(1, { muted: 'yes' }))).loadSettings()).toEqual(DEFAULT_AUDIO_SETTINGS);
-    expect(createStorage(fakeBackend(settingsEntry(2, 'loud'))).loadSettings()).toEqual(DEFAULT_AUDIO_SETTINGS);
+    expect(createStorage(fakeBackend(settingsEntry(3, 'loud'))).loadSettings()).toEqual(DEFAULT_AUDIO_SETTINGS);
     expect(createStorage(fakeBackend({ [STORAGE_KEYS.settings]: '{oops' })).loadSettings()).toEqual(DEFAULT_AUDIO_SETTINGS);
   });
 
-  it('repairs partial or out-of-range version 2 settings', () => {
-    expect(createStorage(fakeBackend(settingsEntry(2, { volume: 150, voiceStyle: 'shouty' }))).loadSettings())
-      .toEqual(DEFAULT_AUDIO_SETTINGS);
-    expect(createStorage(fakeBackend(settingsEntry(2, { volume: -3, voice: false }))).loadSettings())
-      .toEqual({ ...DEFAULT_AUDIO_SETTINGS, volume: 0, voice: false });
-  });
-
-  it('adds the default beep level to version 2 settings saved without it', () => {
-    const saved = { volume: 60, beeps: false, voice: true, voiceStyle: 'intense', fanfare: false };
-    expect(createStorage(fakeBackend(settingsEntry(2, saved))).loadSettings()).toEqual({ ...saved, beepLevel: 60 });
+  it('repairs partial or out-of-range version 3 settings', () => {
+    expect(createStorage(fakeBackend(settingsEntry(3, { voiceVolume: 150, beepVolume: -3 }))).loadSettings())
+      .toEqual({ ...DEFAULT_AUDIO_SETTINGS, voiceVolume: 100, beepVolume: 0 });
   });
 
   it('returns a fresh settings object each time', () => {
     const storage = createStorage(fakeBackend());
     const first = storage.loadSettings();
-    first.volume = 5;
-    expect(storage.loadSettings().volume).toBe(100);
+    first.voiceVolume = 5;
+    expect(storage.loadSettings().voiceVolume).toBe(100);
   });
 
   it('never throws on settings with a broken backend', () => {

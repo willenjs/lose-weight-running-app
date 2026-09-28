@@ -44,31 +44,23 @@ describe('upcomingCues', () => {
 
 describe('filterCues', () => {
   const all = upcomingCues(fresh(), w, T0);
-  const on = { volume: 100, beeps: true, fanfare: true };
-  const kinds = (cues) => new Set(cues.map((c) => c.kind));
+  const on = { beepVolume: 60, fanfareVolume: 60 };
 
-  it('keeps everything when all cues are on', () => {
+  it('keeps everything when beeps and fanfare have volume', () => {
     expect(filterCues(all, on)).toEqual(all);
   });
 
-  it('drops the countdown pips when beeps are off, keeping phase tones', () => {
-    const cues = filterCues(all, { ...on, beeps: false });
-    expect(kinds(cues)).toEqual(new Set(['walk', 'jog', 'run', 'finish']));
-    expect(cues).toHaveLength(5 + 1);
+  it('drops the countdown and phase tones at 0% beeps', () => {
+    expect(filterCues(all, { ...on, beepVolume: 0 }).map((c) => c.kind)).toEqual(['finish']);
   });
 
-  it('drops the finish melody when the fanfare is off', () => {
-    const cues = filterCues(all, { ...on, fanfare: false });
+  it('drops the finish melody at 0% fanfare', () => {
+    const cues = filterCues(all, { ...on, fanfareVolume: 0 });
     expect(cues.some((c) => c.kind === 'finish')).toBe(false);
     expect(cues).toHaveLength(all.length - 1);
   });
 
-  it('keeps phase-start tones even with beeps and fanfare off', () => {
-    const cues = filterCues(all, { volume: 50, beeps: false, fanfare: false });
-    expect(cues.map((c) => c.kind)).toEqual(['walk', 'jog', 'walk', 'jog', 'run']);
-  });
-
-  it('schedules nothing at volume 0', () => {
-    expect(filterCues(all, { ...on, volume: 0 })).toEqual([]);
+  it('schedules nothing when both are at 0%', () => {
+    expect(filterCues(all, { beepVolume: 0, fanfareVolume: 0 })).toEqual([]);
   });
 });

@@ -1,9 +1,9 @@
 import { emptyProgress } from '../core/progress.js';
-import { DEFAULT_AUDIO_SETTINGS, normalizeAudioSettings } from '../core/audioSettings.js';
+import { normalizeAudioSettings, migrateAudioSettings } from '../core/audioSettings.js';
 
 const VERSION = 1;
-// v1 stored { muted }; v2 stores AudioSettings.
-const SETTINGS_VERSION = 2;
+// v1 stored { muted }, v2 a master volume with switches, v3 AudioSettings.
+const SETTINGS_VERSION = 3;
 
 export const STORAGE_KEYS = {
   progress: 'runningAssistant.progress',
@@ -33,13 +33,6 @@ const isSession = (value) =>
   typeof value.pausedTotalMs === 'number' &&
   typeof value.skippedMs === 'number';
 
-/** v1 → v2: a muted app starts at volume 0, otherwise at full volume. */
-function migrateSettings(version, data) {
-  if (version === 1 && isObject(data) && typeof data.muted === 'boolean') {
-    return { ...DEFAULT_AUDIO_SETTINGS, volume: data.muted ? 0 : 100 };
-  }
-  return undefined;
-}
 
 /** @param {Pick<Storage, 'getItem' | 'setItem' | 'removeItem'> | null} [backend] */
 export function createStorage(backend = defaultBackend()) {
@@ -84,7 +77,7 @@ export function createStorage(backend = defaultBackend()) {
     loadLang: () => read(STORAGE_KEYS.lang, (value) => typeof value === 'string', null),
     saveLang: (lang) => write(STORAGE_KEYS.lang, lang),
     loadSettings: () => normalizeAudioSettings(
-      read(STORAGE_KEYS.settings, isObject, null, { version: SETTINGS_VERSION, migrate: migrateSettings }),
+      read(STORAGE_KEYS.settings, isObject, null, { version: SETTINGS_VERSION, migrate: migrateAudioSettings }),
     ),
     saveSettings: (settings) => write(STORAGE_KEYS.settings, settings, SETTINGS_VERSION),
   };
