@@ -12,7 +12,7 @@ import { share, canShare } from '../platform/share.js';
 import { normalizeAudioSettings, isMuted, volumeLevel, testSequence } from '../core/audioSettings.js';
 import { coachExtras } from '../core/coach.js';
 
-export { VOLUME_PRESETS, VOICE_STYLES, MIN_BEEP_LEVEL } from '../core/audioSettings.js';
+export { VOICE_STYLES, MIN_BEEP_LEVEL } from '../core/audioSettings.js';
 
 /** @typedef {import('../core/timer.js').Session} Session */
 

@@ -1,7 +1,7 @@
 <script>
   import {
     app, t, setAudio, previewAudio, testAudio, closeAudioSheet, volumeIcon, volumeLabel, voiceTag,
-    VOLUME_PRESETS, VOICE_STYLES, MIN_BEEP_LEVEL,
+    VOICE_STYLES, MIN_BEEP_LEVEL,
   } from '../controller.svelte.js';
   import Icon from './Icon.svelte';
   import Switch from './Switch.svelte';
@@ -82,14 +82,6 @@
         oninput={(event) => previewAudio({ beepLevel: Number(event.currentTarget.value) })}
         onchange={(event) => setAudio({ beepLevel: Number(event.currentTarget.value) })}
       />
-      <div class="presets">
-        {#each VOLUME_PRESETS as preset (preset)}
-          <button class="preset" class:active={s.volume === preset} aria-pressed={s.volume === preset} onclick={() => setAudio({ volume: preset })}>
-            <span>{t(`audio.preset.${preset}`)}</span>
-            <small class="num">{preset}%</small>
-          </button>
-        {/each}
-      </div>
     </section>
 
     <p class="label section-label">{t('audio.section')}</p>
@@ -267,24 +259,6 @@
   .slider-small::-moz-range-progress { height: 8px; background: var(--walk); }
   .slider-small::-moz-range-thumb { width: 24px; height: 24px; background: var(--walk); }
 
-  .presets { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-  .preset {
-    min-height: 52px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    border-radius: 12px;
-    background: var(--surface-1);
-    font-family: var(--display-font);
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-  }
-  .preset small { font-size: 11px; color: var(--text-muted); }
-  .preset.active { background: var(--mint-soft); color: var(--mint); box-shadow: inset 0 0 0 1px var(--mint); }
-  .preset.active small { color: var(--mint); }
 
   .section-label { padding: 4px 4px 0; }
 

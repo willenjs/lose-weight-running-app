@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import pt from '../../src/i18n/pt.js';
 import en from '../../src/i18n/en.js';
 import es from '../../src/i18n/es.js';
-import { VOLUME_PRESETS, VOICE_STYLES } from '../../src/core/audioSettings.js';
+import { VOICE_STYLES } from '../../src/core/audioSettings.js';
 import { translate, formatDuration, LANGS, DEFAULT_LANG, LOCALES, VOICE_LOCALES } from '../../src/i18n/index.js';
 
 describe('resources', () => {
@@ -121,7 +121,6 @@ describe('audio sheet and coach texts', () => {
     'audio.styleLabel', 'audio.fanfare', 'audio.fanfareHint', 'audio.test',
     'audio.save', 'run.beepsOnly', 'audio.beepLevel', 'audio.beepLevelHint',
     ...['off', 'low', 'normal', 'high'].map((level) => `audio.level.${level}`),
-    ...VOLUME_PRESETS.map((preset) => `audio.preset.${preset}`),
     ...VOICE_STYLES.map((style) => `audio.style.${style}`),
     ...['walk', 'jog', 'run', 'halfway', 'last'].map((line) => `coach.${line}`),
   ];

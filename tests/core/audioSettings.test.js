@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  DEFAULT_AUDIO_SETTINGS, VOLUME_PRESETS, VOICE_STYLES, MIN_BEEP_LEVEL,
+  DEFAULT_AUDIO_SETTINGS, VOICE_STYLES, MIN_BEEP_LEVEL,
   normalizeAudioSettings, volumeLevel, isMuted, testSequence,
 } from '../../src/core/audioSettings.js';
 
@@ -12,8 +12,7 @@ describe('audio settings defaults', () => {
     expect(Object.isFrozen(DEFAULT_AUDIO_SETTINGS)).toBe(true);
   });
 
-  it('offer mute, medium, strong and max presets and two coach styles', () => {
-    expect(VOLUME_PRESETS).toEqual([0, 50, 80, 100]);
+  it('offer two coach styles', () => {
     expect(VOICE_STYLES).toEqual(['intense', 'commands']);
   });
 });

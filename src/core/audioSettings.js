@@ -26,7 +26,6 @@ export const DEFAULT_AUDIO_SETTINGS = Object.freeze({
   fanfare: true,
 });
 
-export const VOLUME_PRESETS = [0, 50, 80, 100];
 export const MIN_BEEP_LEVEL = 25;
 
 /** @type {VoiceStyle[]} */
