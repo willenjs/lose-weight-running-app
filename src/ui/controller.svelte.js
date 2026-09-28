@@ -183,32 +183,24 @@ export function previewAudio(patch) {
 }
 
 /**
- * Plays what a workout would, per the current settings: countdown and phase
- * tone, a sample announcement, then the fanfare. Called from a tap.
+ * Plays each sound that has volume, in the order of the sliders: a sample
+ * announcement, then the beeps, then the fanfare. Called from a tap.
  */
 export function testAudio() {
   const run = ++testRun;
   clearTimeout(testTimer);
   const settings = $state.snapshot(app.settings);
-  const { lead, speak: withVoice, voiceExtras, tail } = testSequence(settings);
-  const endAfter = (ms) => {
+  const { speak: withVoice, voiceExtras, tones } = testSequence(settings);
+  const playTones = () => {
+    if (run !== testRun) return;
+    const ms = cuePlayer.test(tones, settings);
     testTimer = setTimeout(() => { if (run === testRun) app.audioTesting = false; }, ms);
-  };
-  const playTail = () => {
-    if (run === testRun) endAfter(cuePlayer.test(tail, settings));
   };
 
   app.audioTesting = true;
-  const leadMs = cuePlayer.test(lead, settings);
-  if (!withVoice) {
-    endAfter(leadMs);
-    return;
-  }
-  testTimer = setTimeout(() => {
-    if (run !== testRun) return;
-    const spoken = say(phaseLine('run', TEST_PHASE_SECONDS, voiceExtras), { onEnd: playTail });
-    if (!spoken) playTail();
-  }, leadMs);
+  // Unlock audio within the tap, even when the voice goes first.
+  cuePlayer.test([], settings);
+  if (!withVoice || !say(phaseLine('run', TEST_PHASE_SECONDS, voiceExtras), { onEnd: playTones })) playTones();
 }
 
 export function audioMuted() {

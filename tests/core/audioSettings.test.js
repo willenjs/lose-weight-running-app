@@ -90,22 +90,20 @@ describe('activeCues', () => {
 describe('testSequence', () => {
   const all = { ...DEFAULT_AUDIO_SETTINGS };
 
-  it('plays the countdown, the voice line (no phase tone over it), then the fanfare', () => {
-    expect(testSequence(all)).toEqual({
-      lead: ['pip', 'pip', 'lastPip'], speak: true, voiceExtras: [], tail: ['finish'],
-    });
+  it('follows the slider order: voice line, then the countdown beeps, then the fanfare', () => {
+    expect(testSequence(all)).toEqual({ speak: true, voiceExtras: [], tones: ['pip', 'pip', 'lastPip', 'finish'] });
   });
 
-  it('plays the phase tone and the fanfare back to back when the voice is at 0%', () => {
+  it('plays the phase tone after the countdown when the voice is at 0%', () => {
     expect(testSequence({ ...all, voiceVolume: 0 })).toEqual({
-      lead: ['pip', 'pip', 'lastPip', 'run', 'finish'], speak: false, voiceExtras: [], tail: [],
+      speak: false, voiceExtras: [], tones: ['pip', 'pip', 'lastPip', 'run', 'finish'],
     });
   });
 
-  it('leaves out the tones at 0% beeps and the fanfare at 0% fanfare', () => {
-    expect(testSequence({ ...all, beepVolume: 0 }).lead).toEqual([]);
-    expect(testSequence({ ...all, fanfareVolume: 0 }).tail).toEqual([]);
-    expect(testSequence({ ...all, voiceVolume: 0, beepVolume: 0 }).lead).toEqual(['finish']);
+  it('leaves out the beeps at 0% beeps and the fanfare at 0% fanfare', () => {
+    expect(testSequence({ ...all, beepVolume: 0 }).tones).toEqual(['finish']);
+    expect(testSequence({ ...all, fanfareVolume: 0 }).tones).toEqual(['pip', 'pip', 'lastPip']);
+    expect(testSequence({ ...all, voiceVolume: 0, beepVolume: 0 }).tones).toEqual(['finish']);
   });
 
   it('adds the intense coach line to the sample announcement', () => {
@@ -114,6 +112,6 @@ describe('testSequence', () => {
 
   it('plays nothing when every volume is 0', () => {
     expect(testSequence({ ...all, voiceVolume: 0, beepVolume: 0, fanfareVolume: 0 }))
-      .toEqual({ lead: [], speak: false, voiceExtras: [], tail: [] });
+      .toEqual({ speak: false, voiceExtras: [], tones: [] });
   });
 });

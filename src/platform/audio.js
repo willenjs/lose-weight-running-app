@@ -127,8 +127,9 @@ export function createCuePlayer() {
    * @returns {number} how long the tones take, in ms (0 when nothing plays)
    */
   function test(kinds, settings) {
-    if (!AudioContextClass || kinds.length === 0) return 0;
+    if (!AudioContextClass) return 0;
     try {
+      // Created/resumed even with no kinds, so a tap can unlock audio for later tones.
       ensureContext();
       let at = ctx.currentTime + 0.05;
       const start = at;

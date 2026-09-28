@@ -91,24 +91,19 @@ export function isMuted(settings) {
 /** @typedef {import('./cues.js').CueKind} CueKind */
 
 /**
- * What the audio test plays, mirroring the settings: tones in `lead`, then a
- * sample announcement (if `speak`) with `voiceExtras` i18n keys, then `tail`.
- * With the voice on, the sample line stands in for the phase tone; without
- * it, the phase tone plays and the tail joins the lead back to back.
+ * What the audio test plays, in the order of the sliders: a sample
+ * announcement (if the voice has volume) with `voiceExtras` i18n keys, then
+ * `tones` back to back: the countdown beeps and the fanfare. Without the
+ * voice, the phase tone follows the countdown so beeps still sound complete.
  * @param {AudioSettings} settings
- * @returns {{ lead: CueKind[], speak: boolean, voiceExtras: string[], tail: CueKind[] }}
+ * @returns {{ speak: boolean, voiceExtras: string[], tones: CueKind[] }}
  */
 export function testSequence(settings) {
-  const beeps = settings.beepVolume > 0;
+  const speak = settings.voiceVolume > 0;
   /** @type {CueKind[]} */
-  const countdown = beeps ? ['pip', 'pip', 'lastPip'] : [];
+  const beeps = settings.beepVolume > 0 ? ['pip', 'pip', 'lastPip', ...(speak ? [] : ['run'])] : [];
   /** @type {CueKind[]} */
-  const tail = settings.fanfareVolume > 0 ? ['finish'] : [];
-  if (settings.voiceVolume === 0) {
-    /** @type {CueKind[]} */
-    const phaseTone = beeps ? ['run'] : [];
-    return { lead: [...countdown, ...phaseTone, ...tail], speak: false, voiceExtras: [], tail: [] };
-  }
-  const voiceExtras = settings.voiceStyle === 'intense' ? ['coach.run'] : [];
-  return { lead: countdown, speak: true, voiceExtras, tail };
+  const fanfare = settings.fanfareVolume > 0 ? ['finish'] : [];
+  const voiceExtras = speak && settings.voiceStyle === 'intense' ? ['coach.run'] : [];
+  return { speak, voiceExtras, tones: [...beeps, ...fanfare] };
 }
