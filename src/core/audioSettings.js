@@ -26,7 +26,7 @@ export const DEFAULT_AUDIO_SETTINGS = Object.freeze({
   fanfare: true,
 });
 
-export const MIN_BEEP_LEVEL = 25;
+export const MIN_BEEP_LEVEL = 0;
 
 /** @type {VoiceStyle[]} */
 export const VOICE_STYLES = ['intense', 'commands'];
@@ -76,17 +76,19 @@ export function isMuted(settings) {
 /**
  * What the audio test plays, mirroring the settings: tones in `lead`, then a
  * sample announcement (if `speak`) with `voiceExtras` i18n keys, then `tail`.
- * Without the voice, the tail joins the lead so the tones play back to back.
+ * With the voice on, the sample line stands in for the phase tone; without
+ * it, the phase tone plays and the tail joins the lead back to back.
  * @param {AudioSettings} settings
  * @returns {{ lead: CueKind[], speak: boolean, voiceExtras: string[], tail: CueKind[] }}
  */
 export function testSequence(settings) {
   if (isMuted(settings)) return { lead: [], speak: false, voiceExtras: [], tail: [] };
   /** @type {CueKind[]} */
-  const lead = settings.beeps ? ['pip', 'pip', 'lastPip', 'run'] : ['run'];
+  const countdown = settings.beeps ? ['pip', 'pip', 'lastPip'] : [];
   /** @type {CueKind[]} */
   const tail = settings.fanfare ? ['finish'] : [];
-  if (!settings.voice) return { lead: [...lead, ...tail], speak: false, voiceExtras: [], tail: [] };
+  if (!settings.voice) return { lead: [...countdown, 'run', ...tail], speak: false, voiceExtras: [], tail: [] };
+  const lead = countdown;
   const voiceExtras = settings.voiceStyle === 'intense' ? ['coach.run'] : [];
   return { lead, speak: true, voiceExtras, tail };
 }

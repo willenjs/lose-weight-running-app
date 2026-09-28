@@ -76,10 +76,11 @@ describe('beep level', () => {
     expect(normalizeAudioSettings({ volume: 80, beeps: true }).beepLevel).toBe(60);
   });
 
-  it('clamps to the minimum..100, rounds and accepts numeric strings', () => {
-    expect(MIN_BEEP_LEVEL).toBe(25);
-    expect(normalizeAudioSettings({ beepLevel: 10 }).beepLevel).toBe(25);
-    expect(normalizeAudioSettings({ beepLevel: 0 }).beepLevel).toBe(25);
+  it('clamps to 0..100, rounds and accepts numeric strings', () => {
+    expect(MIN_BEEP_LEVEL).toBe(0);
+    expect(normalizeAudioSettings({ beepLevel: 10 }).beepLevel).toBe(10);
+    expect(normalizeAudioSettings({ beepLevel: 0 }).beepLevel).toBe(0);
+    expect(normalizeAudioSettings({ beepLevel: -5 }).beepLevel).toBe(0);
     expect(normalizeAudioSettings({ beepLevel: 130 }).beepLevel).toBe(100);
     expect(normalizeAudioSettings({ beepLevel: 44.4 }).beepLevel).toBe(44);
     expect(normalizeAudioSettings({ beepLevel: '75' }).beepLevel).toBe(75);
@@ -90,14 +91,15 @@ describe('beep level', () => {
 describe('testSequence', () => {
   const all = { ...DEFAULT_AUDIO_SETTINGS };
 
-  it('plays countdown, run tone, the voice line, then the fanfare when all are on', () => {
+  it('plays the countdown, the voice line (no phase tone over it), then the fanfare', () => {
     expect(testSequence(all)).toEqual({
-      lead: ['pip', 'pip', 'lastPip', 'run'], speak: true, voiceExtras: [], tail: ['finish'],
+      lead: ['pip', 'pip', 'lastPip'], speak: true, voiceExtras: [], tail: ['finish'],
     });
   });
 
   it('leaves the countdown out when beeps are off', () => {
-    expect(testSequence({ ...all, beeps: false }).lead).toEqual(['run']);
+    expect(testSequence({ ...all, beeps: false }).lead).toEqual([]);
+    expect(testSequence({ ...all, beeps: false, voice: false }).lead).toEqual(['run', 'finish']);
   });
 
   it('leaves the fanfare out when it is off', () => {
