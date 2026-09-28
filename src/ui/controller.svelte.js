@@ -3,7 +3,7 @@ import {
   startSession, pauseSession, resumeSession, skipPhase, getState, shouldOfferResume,
 } from '../core/timer.js';
 import { markDone, unmark, programStats } from '../core/progress.js';
-import { translate, formatDuration, LANGS, DEFAULT_LANG, LOCALES } from '../i18n/index.js';
+import { translate, formatDuration, LANGS, DEFAULT_LANG, LOCALES, VOICE_LOCALES } from '../i18n/index.js';
 import { createStorage } from '../platform/storage.js';
 import { createCuePlayer } from '../platform/audio.js';
 import { speak, cancelSpeech } from '../platform/speech.js';
@@ -80,6 +80,21 @@ export function openWorkout(id) {
 export function goToPlan() {
   app.workoutId = null;
   app.screen = 'plan';
+}
+
+/** Header brand tap: back to the plan, but never ends a run without asking. */
+export function goHome() {
+  if (app.screen === 'run') {
+    requestStop();
+    return;
+  }
+  if (app.screen === 'plan') {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    return;
+  }
+  goToPlan();
+  // Instant: a smooth scroll gets cut short while the new screen renders.
+  window.scrollTo(0, 0);
 }
 
 export function unmarkWorkout(id) {
@@ -251,14 +266,14 @@ function announcePhase(phase, remainingMs) {
     phase: t(`phase.${phase.type}`),
     duration: formatDuration(Math.round(remainingMs / 1000), app.lang),
   });
-  speak(text, LOCALES[app.lang]);
+  speak(text, VOICE_LOCALES[app.lang]);
 }
 
 function finish(workout) {
   saveProgress(markDone(app.progress, workout.id, new Date().toISOString()));
   endRun();
   app.screen = 'finished';
-  if (!app.muted) speak(t('cue.finish'), LOCALES[app.lang]);
+  if (!app.muted) speak(t('cue.finish'), VOICE_LOCALES[app.lang]);
   finishTimer = setTimeout(() => cuePlayer.stop(), FINISH_AUDIO_GRACE_MS);
 }
 

@@ -2,6 +2,7 @@ export default {
   'app.title': 'PulseRun',
   'app.subtitle': '5-Week Plan',
   'lang.label': 'Language',
+  'header.home': 'Home',
   'header.mute': 'Mute audio',
   'header.unmute': 'Unmute audio',
   'common.weekDay': 'Week {week} • Day {day}',

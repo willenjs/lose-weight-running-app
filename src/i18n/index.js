@@ -1,11 +1,16 @@
 import pt from './pt.js';
 import en from './en.js';
+import es from './es.js';
 
-export const LANGS = ['pt', 'en'];
+export const LANGS = ['pt', 'en', 'es'];
 export const DEFAULT_LANG = 'pt';
-export const LOCALES = { pt: 'pt-BR', en: 'en-US' };
+// Display locale: dates, <html lang> and the first choice for the voice.
+export const LOCALES = { pt: 'pt-BR', en: 'en-US', es: 'es-419' };
+// Voices to try in order; devices rarely ship an es-419 voice, so fall back
+// to Latin American variants before any other Spanish voice.
+export const VOICE_LOCALES = { pt: ['pt-BR'], en: ['en-US'], es: ['es-419', 'es-MX', 'es-US'] };
 
-const DICTIONARIES = { pt, en };
+const DICTIONARIES = { pt, en, es };
 
 /**
  * @param {string} lang
