@@ -2,7 +2,7 @@
   import { findWorkout, totalSeconds, phaseSeconds, phaseRole } from '../core/plan.js';
   import { formatClock } from '../core/timer.js';
   import {
-    app, t, formatDate, goToPlan, startWorkout, unmarkWorkout, workoutMinutes, cuesSentence,
+    app, t, formatDate, goToPlan, startWorkout, unmarkWorkout, workoutMinutes,
   } from './controller.svelte.js';
   import AppHeader from './components/AppHeader.svelte';
   import Icon from './components/Icon.svelte';
@@ -15,7 +15,6 @@
   const workout = $derived(findWorkout(app.workoutId));
   const completedAt = $derived(app.progress.completed[app.workoutId]);
   const totals = $derived(phaseSeconds(workout));
-  const audioNote = $derived(cuesSentence());
   const total = $derived(totalSeconds(workout));
   const weekDay = $derived(t('common.weekDay', { week: workout.week, day: workout.day }));
 </script>
@@ -79,11 +78,6 @@
     </div>
   </section>
 
-  <section class="card note" class:off={!audioNote}>
-    <span class="note-icon"><Icon name={audioNote ? 'volume' : 'volume-off'} size={20} /></span>
-    <p>{audioNote ?? t('workout.voiceOff')}</p>
-  </section>
-
   {#if completedAt}
     <p class="completed">
       <Icon name="check" size={16} />{t('workout.done', { date: formatDate(completedAt) })}
@@ -128,7 +122,6 @@
   .note p { margin: 0; font-size: 14px; line-height: 1.45; }
   .note .label.mint { color: var(--mint); margin-bottom: 4px; }
   .note-icon { flex: none; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; background: var(--mint-soft); color: var(--mint); }
-  .note.off .note-icon { background: var(--surface-2); color: var(--text-muted); }
   .completed { display: flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: wrap; margin: 0; color: var(--mint); font-size: 14px; }
   .sticky {
     position: sticky;

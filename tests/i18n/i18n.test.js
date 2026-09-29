@@ -3,7 +3,7 @@ import pt from '../../src/i18n/pt.js';
 import en from '../../src/i18n/en.js';
 import es from '../../src/i18n/es.js';
 import { VOICE_STYLES } from '../../src/core/audioSettings.js';
-import { formatList, translate, formatDuration, LANGS, DEFAULT_LANG, LOCALES, VOICE_LOCALES } from '../../src/i18n/index.js';
+import { translate, formatDuration, LANGS, DEFAULT_LANG, LOCALES, VOICE_LOCALES } from '../../src/i18n/index.js';
 
 describe('resources', () => {
   it('have the same keys in every language', () => {
@@ -119,7 +119,6 @@ describe('audio sheet and coach texts', () => {
     'header.audio', 'audio.title', 'audio.subtitle', 'audio.close',
     'audio.beeps', 'audio.beepsHint', 'audio.voice', 'audio.voiceHint',
     'audio.styleLabel', 'audio.fanfare', 'audio.fanfareHint', 'audio.test', 'audio.save',
-    'workout.audioOn', 'workout.cue.voice', 'workout.cue.beeps', 'workout.cue.fanfare',
     'run.cue.beeps', 'run.cue.voice', 'run.cue.fanfare',
     ...VOICE_STYLES.map((style) => `audio.style.${style}`),
     ...['walk', 'jog', 'run', 'halfway', 'last'].map((line) => `coach.${line}`),
@@ -139,14 +138,5 @@ describe('audio sheet and coach texts', () => {
         expect(translate(lang, `coach.${line}`)).toMatch(/[.!]$/);
       }
     }
-  });
-});
-
-describe('formatList', () => {
-  it('joins items with the "and" of each language', () => {
-    expect(formatList(['a', 'b', 'c'], 'en')).toBe('a, b, and c');
-    expect(formatList(['a', 'b', 'c'], 'pt')).toBe('a, b e c');
-    expect(formatList(['a', 'b'], 'es')).toBe('a y b');
-    expect(formatList(['a'], 'pt')).toBe('a');
   });
 });
