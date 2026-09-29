@@ -119,7 +119,6 @@ describe('audio sheet and coach texts', () => {
     'header.audio', 'audio.title', 'audio.subtitle', 'audio.close',
     'audio.beeps', 'audio.beepsHint', 'audio.voice', 'audio.voiceHint',
     'audio.styleLabel', 'audio.fanfare', 'audio.fanfareHint', 'audio.test', 'audio.save',
-    'run.cue.beeps', 'run.cue.voice', 'run.cue.fanfare',
     ...VOICE_STYLES.map((style) => `audio.style.${style}`),
     ...['walk', 'jog', 'run', 'halfway', 'last'].map((line) => `coach.${line}`),
   ];

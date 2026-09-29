@@ -9,7 +9,7 @@ import { createCuePlayer } from '../platform/audio.js';
 import { speak, cancelSpeech } from '../platform/speech.js';
 import { createWakeLock } from '../platform/wakeLock.js';
 import { share, canShare } from '../platform/share.js';
-import { normalizeAudioSettings, isMuted, testSequence, activeCues } from '../core/audioSettings.js';
+import { normalizeAudioSettings, isMuted, testSequence } from '../core/audioSettings.js';
 import { coachExtras } from '../core/coach.js';
 
 export { VOICE_STYLES } from '../core/audioSettings.js';
@@ -209,12 +209,6 @@ export function audioMuted() {
 
 export function volumeIcon() {
   return isMuted(app.settings) ? 'volume-off' : 'volume';
-}
-
-/** Run screen audio chip, e.g. "Beeps + Voice + Fanfare"; null when nothing plays. */
-export function cuesLabel() {
-  const cues = activeCues(app.settings);
-  return cues.length ? cues.map((cue) => t(`run.cue.${cue}`)).join(' + ') : null;
 }
 
 /** Voice language tag shown next to the voice coach, e.g. "PT-BR". */
