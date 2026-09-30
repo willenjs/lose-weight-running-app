@@ -1,5 +1,5 @@
-import { getState, phaseBoundaries } from './timer.js';
-import { upcomingCues, filterCues } from './cues.js';
+import { getState, phaseBoundaries, startSession } from './timer.js';
+import { upcomingCues, filterCues, DUE_GRACE_MS } from './cues.js';
 import { coachExtras } from './coach.js';
 
 /** @typedef {import('./cues.js').CueKind} CueKind */
@@ -51,4 +51,28 @@ export function buildTimeline(session, workout, now, settings, { announceCurrent
   // At the same moment the tone plays first, then the voice.
   const order = (event) => (event.kind === 'tone' ? 0 : 1);
   return events.sort((a, b) => a.inMs - b.inMs || order(a) - order(b));
+}
+
+/**
+ * Every event of the workout, with `inMs` measured from the workout start:
+ * the timeline of a fresh start. The Android service keeps it for the whole
+ * run and picks the part still ahead after each pause, resume or skip.
+ * @param {import('./plan.js').Workout} workout
+ * @param {import('./audioSettings.js').AudioSettings} settings
+ * @returns {TimelineEvent[]}
+ */
+export function workoutSchedule(workout, settings) {
+  return buildTimeline(startSession(workout.id, 0), workout, 0, settings, { announceCurrent: true });
+}
+
+/**
+ * The part of a workout schedule still ahead at `elapsedMs`. An event that
+ * fell due at most DUE_GRACE_MS ago is kept: a skip lands exactly on a phase
+ * start, and the change takes a few ms to reach whoever plays it.
+ * @param {TimelineEvent[]} schedule from workoutSchedule
+ * @param {number} elapsedMs
+ * @returns {TimelineEvent[]}
+ */
+export function scheduleFrom(schedule, elapsedMs) {
+  return schedule.filter((event) => event.inMs >= elapsedMs - DUE_GRACE_MS);
 }

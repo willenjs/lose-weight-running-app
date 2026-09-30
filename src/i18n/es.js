@@ -88,6 +88,7 @@ export default {
   'cue.finish': '¡Entrenamiento completado!',
   'notification.channel': 'Entrenamiento',
   'notification.running': 'Entrenamiento en curso',
+  'notification.paused': 'Entrenamiento en pausa',
   'audio.title': 'Audio y volumen',
   'audio.subtitle': 'Optimizado para audífonos o el altavoz de la caminadora',
   'audio.close': 'Cerrar',
@@ -134,4 +135,6 @@ export default {
   'unit.second.one': '{n} segundo',
   'unit.second.other': '{n} segundos',
   'unit.and': ' y ',
+  'watch.idle': 'Inicia un entrenamiento en tu teléfono',
+  'watch.unreachable': 'Teléfono fuera de alcance',
 };

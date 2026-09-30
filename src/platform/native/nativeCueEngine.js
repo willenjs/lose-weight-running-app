@@ -1,61 +1,119 @@
-import { buildTimeline } from '../../core/timeline.js';
-import { nativeEvents, nativeTest } from './payload.js';
+import { runPayload, nativeTest } from './payload.js';
+import { getState } from '../../core/timer.js';
+import { reconcile, confirmFinish } from './runState.js';
 
-// A start delayed longer than this (the permission prompt) is rebuilt from the current time.
+// A start delayed longer than this (the permission prompt) announces where the runner is.
 const STALE_START_MS = 1000;
 
 /**
- * Cues played by the Android app's Coach plugin, which schedules the whole
- * timeline (tones and speech) in a foreground service, so they keep playing
- * with the screen locked or another app in front.
+ * Cues played by the Android app's Coach plugin. Its foreground service owns
+ * the run: it plays the whole schedule (tones and speech) with the screen
+ * locked, applies pause / resume / skip / stop coming from the watch, and
+ * reports each change back, as a `stateChanged` event while the page runs
+ * and through `current()` when it wakes up.
  * @param {{
  *   plugin: {
- *     start(data: object): Promise<unknown>, stop(): Promise<unknown>,
+ *     start(data: object): Promise<unknown>, stop(data: object): Promise<unknown>,
+ *     current(): Promise<{ state: import('./runState.js').RunState | null }>,
+ *     addListener(event: string, callback: (data: any) => void): Promise<unknown>,
  *     test(data: object): Promise<unknown>, requestPermissions(): Promise<unknown>,
  *   },
  *   locales: () => string[],
  *   speechText: (event: any) => string,
- *   notification: (workout: import('../../core/plan.js').Workout) => { channel: string, title: string, text: string },
+ *   notification: (workout: import('../../core/plan.js').Workout) => { channel: string, title: string, text: string, pausedText: string },
+ *   watch: (workout: import('../../core/plan.js').Workout) => { title: string, labels: Record<string, string> },
  *   onFailure: (error: unknown) => void,
  *   clock?: () => number,
  * }} options
  * @returns {import('../webCueEngine.js').CueEngine}
  */
-export function createNativeCueEngine({ plugin, locales, speechText, notification, onFailure, clock = Date.now }) {
+export function createNativeCueEngine({ plugin, locales, speechText, notification, watch, onFailure, clock = Date.now }) {
   /** @type {Promise<unknown> | null} */
   let permission = null;
-  // Bumped on every start and stop, so a start still waiting for the
-  // permission prompt does not revive cues after a later stop.
+  // Bumped on every sync and stop, so a sync still waiting for the
+  // permission prompt does not revive a run after a later stop.
   let generation = 0;
   let testRun = 0;
+  // Always replaced, never mutated: a pending confirmation compares it by identity.
+  /** The run the app shows and the newest revision seen for it. @type {{ runId: number, revision: number } | null} */
+  let tracked = null;
+  /** @type {(decision: import('./runState.js').RunDecision) => void} */
+  let listener = () => {};
+  /** The pending finish confirmation: its run and the tracked state it was asked with. @type {{ runId: number, seen: { runId: number, revision: number } } | null} */
+  let confirming = null;
+
+  const track = (session) => {
+    if (tracked?.runId !== session.startedAt) tracked = { runId: session.startedAt, revision: -1 };
+  };
+
+  /** @param {import('./runState.js').RunState | null} state */
+  const deliver = (state) => {
+    const decision = reconcile(tracked?.runId ?? null, tracked?.revision ?? -1, state);
+    if (decision.type === 'ignore') return;
+    if (decision.type === 'adopt') tracked = { runId: state.runId, revision: state.revision };
+    else tracked = null;
+    listener(decision);
+  };
 
   return {
     speaksInBackground: true,
-    start(session, workout, now, settings, { announceCurrent }) {
+    sync(session, workout, now, settings, { announceCurrent }) {
       const run = ++generation;
       const calledAt = clock();
-      /** Timeline as of `at`; the native side offsets its clock by the delivery lag. */
-      const payload = (at, announce) => ({
-        events: nativeEvents(buildTimeline(session, workout, at, settings, { announceCurrent: announce }), settings, speechText),
-        locales: locales(),
-        notification: notification(workout),
-        sentAt: at,
-      });
+      track(session);
       permission ??= plugin.requestPermissions().catch(() => {});
       permission
         .then(() => {
           if (run !== generation) return undefined;
-          const waited = clock() - calledAt;
-          // After a slow permission prompt, start from now and say where the runner is.
-          const data = waited > STALE_START_MS ? payload(now + waited, true) : payload(now, announceCurrent);
-          return plugin.start(data);
+          const at = clock();
+          return plugin.start(runPayload(session, workout, at, settings, {
+            speechText,
+            locales: locales(),
+            notification: notification(workout),
+            watch: watch(workout),
+            announceCurrent: announceCurrent || at - calledAt > STALE_START_MS,
+          }));
         })
         .catch(onFailure);
       return true;
     },
     stop() {
       generation++;
-      plugin.stop().catch(() => {});
+      tracked = null;
+      confirming = null;
+      plugin.stop({ reason: 'stopped' }).catch(() => {});
+    },
+    onRunState(callback) {
+      listener = callback;
+      plugin.addListener('stateChanged', deliver).catch(() => {});
+    },
+    checkRunState(session) {
+      track(session);
+      plugin.current().then(({ state }) => deliver(state)).catch(() => {});
+    },
+    confirmFinish(session, workout) {
+      const runId = session.startedAt;
+      // Asked on every tick while the answer is pending: ask the service once.
+      if (confirming?.runId === runId) return;
+      track(session);
+      // Judge the answer against what the app knew when it asked.
+      const ask = { runId, seen: tracked };
+      confirming = ask;
+      const decide = (state) => {
+        // Stopped, or another confirmation replaced this one, while waiting.
+        if (confirming !== ask) return;
+        confirming = null;
+        // A newer state was adopted (or the run ended) while waiting: the
+        // local session asked about is stale, so drop the answer. The next
+        // tick asks again if the session the app now shows is over.
+        if (tracked !== ask.seen) return;
+        const decision = confirmFinish(session, ask.seen.revision, state, (s) => getState(s, workout, clock()).finished);
+        if (decision.type === 'adopt') {
+          tracked = { runId, revision: Math.max(ask.seen.revision, state.revision) };
+        } else tracked = null;
+        listener(decision);
+      };
+      plugin.current().then(({ state }) => decide(state), () => decide(null));
     },
     test(settings, sampleText, onDone) {
       const run = ++testRun;

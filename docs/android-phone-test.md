@@ -48,6 +48,43 @@ Device: Xiaomi 15T Pro (HyperOS). First run: 2026-09-29.
    time; the notification disappears shortly after the finish.
 3. Note any missing or late cue with the time it happened.
 
+## Watch (Galaxy Watch8 40 mm, SM-L330)
+
+Tracks the README's "Manual watch test". Paired through Galaxy Wearable;
+the watch app is installed over Wi-Fi (`WEAR_SERIAL=<ip:port> npm run
+wear:install`; pair first with Developer options → Wireless debugging →
+Pair new device, `adb pair`, then `adb connect`). First run: 2026-09-30.
+
+| # | Test | Status |
+|---|------|--------|
+| W1 | Phone reachable (mint dot on the idle screen) | Passed 2026-09-30 |
+| W2 | Starting a run opens the watch app / chip | Passed 2026-09-30 |
+| W3 | Phone locked: pause, resume, skip, stop from the watch | Passed 2026-09-30 (revisions 4→9, both services stopped) |
+| W4 | Buzzes at phase changes with the watch screen off, full run | Pending |
+| W5 | Always-on display during a run | Passed 2026-09-30 (label + whole minutes, grey outline) |
+| W6 | Out of Bluetooth range and back mid-run | Pending |
+| W7 | Kill the phone app mid-run: "Phone not reachable", resume offered | Pending |
+| W8 | Watch-face chip counts down the right time (TimerPart time base) | Pending |
+
+### Pending watch tests
+
+- **W4:** a whole workout wearing the watch, screen off: one buzz pattern
+  per phase change (Walk one long, Jog two short, Run three short, finish
+  long–short–long), none missed or doubled.
+- **W6:** mid-run, walk away from the phone until the watch loses it,
+  then come back. Expected: the watch keeps counting and buzzing; watch
+  commands show "Celular fora de alcance" while away; it catches up after.
+- **W7:** mid-run, swipe PulseRun away on the phone and force-stop it.
+  Expected: a watch command shows "Celular fora de alcance"; reopening the
+  phone app offers to resume; tapping Descartar ends the run on the watch
+  too (chip gone).
+- **W8:** during a run, look at the PulseRun chip on the watch face. If its
+  countdown is wrong, switch `phaseEndTimeZero` in
+  `android/wear/.../WorkoutService.kt` from `SystemClock.elapsedRealtime()`
+  to `System.currentTimeMillis()`.
+- Also check on the 40 mm screen: "Celular fora de alcance" does not
+  overlap the Pause button; a paused run left 2 h ends on the watch too.
+
 ## Fixes found by phone testing
 
 - 2026-09-29: the start and skip beep was dropped because the timeline was

@@ -1,0 +1,41 @@
+apply plugin: 'com.android.application'
+apply plugin: 'org.jetbrains.kotlin.android'
+apply plugin: 'org.jetbrains.kotlin.plugin.compose'
+
+android {
+    namespace = "io.github.willenjs.pulserun.wear"
+    compileSdk = rootProject.ext.compileSdkVersion
+    defaultConfig {
+        // Same id and (debug) signing key as the phone app: the Data Layer requires both.
+        applicationId "io.github.willenjs.pulserun"
+        minSdkVersion 30
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode 1
+        versionName "1.0"
+    }
+    buildFeatures {
+        compose true
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_21
+        targetCompatibility JavaVersion.VERSION_21
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21
+    }
+}
+
+dependencies {
+    implementation "androidx.core:core-ktx:$androidxCoreVersion"
+    implementation "androidx.activity:activity-compose:$androidxActivityVersion"
+    implementation "androidx.wear.compose:compose-material3:1.5.0"
+    implementation "androidx.wear.compose:compose-foundation:1.5.0"
+    implementation "androidx.wear:wear:1.3.0"
+    implementation "androidx.wear:wear-ongoing:1.0.0"
+    implementation "com.google.android.gms:play-services-wearable:$playServicesWearableVersion"
+    testImplementation "junit:junit:$junitVersion"
+    testImplementation "org.json:json:$orgJsonVersion"
+}

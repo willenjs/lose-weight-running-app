@@ -7,6 +7,7 @@ import { translate, LANGS, DEFAULT_LANG, LOCALES, VOICE_LOCALES } from '../i18n/
 import { createStorage } from '../platform/storage.js';
 import { createWebCueEngine } from '../platform/webCueEngine.js';
 import { createNativeCueEngine } from '../platform/native/nativeCueEngine.js';
+import { WATCH_LABEL_KEYS } from '../platform/native/payload.js';
 import { Coach, isNativeApp } from '../platform/native/coachPlugin.js';
 import { speak, cancelSpeech } from '../platform/speech.js';
 import { createWakeLock } from '../platform/wakeLock.js';
@@ -66,17 +67,23 @@ let engine = isNativeApp()
       channel: t('notification.channel'),
       title: t('workout.title', { week: workout.week, day: workout.day }),
       text: t('notification.running'),
+      pausedText: t('notification.paused'),
+    }),
+    watch: (workout) => ({
+      title: t('common.weekDay', { week: workout.week, day: workout.day }),
+      labels: Object.fromEntries(Object.entries(WATCH_LABEL_KEYS).map(([name, key]) => [name, t(key)])),
     }),
     onFailure: useWebEngine,
   })
   : webEngine;
+engine.onRunState(applyRunState);
 
 /** The native cue service failed: finish the session with web audio. */
 function useWebEngine(error) {
   console.warn('Native cues failed; using web audio.', error);
   if (engine === webEngine) return;
   engine = webEngine;
-  if (app.session && app.session.pausedAt === null) playCues();
+  if (app.session) syncCues();
 }
 
 
@@ -94,8 +101,11 @@ export function init() {
 
   const saved = storage.loadSession();
   if (!saved) return;
-  if (shouldOfferResume(saved, Date.now())) app.pendingResume = saved;
-  else storage.clearSession();
+  if (shouldOfferResume(saved, Date.now())) {
+    app.pendingResume = saved;
+    // The Android service may have moved on (watch commands) or ended the run.
+    engine.checkRunState(saved);
+  } else storage.clearSession();
 }
 
 export function t(key, params) {
@@ -109,11 +119,8 @@ export function formatDate(iso) {
 export function setLang(lang) {
   applyLang(lang);
   storage.saveLang(lang);
-  // The native engine speaks pre-rendered text: re-send it in the new language.
-  if (engine.speaksInBackground && app.session && app.session.pausedAt === null) {
-    engine.stop();
-    playCues();
-  }
+  // The native engine speaks and shows pre-rendered text: re-send it in the new language.
+  if (engine.speaksInBackground && app.session) syncCues();
 }
 
 export function openWorkout(id) {
@@ -163,19 +170,18 @@ export function discardResume() {
 }
 
 export function pause() {
-  engine.stop();
   setSession(pauseSession(app.session, Date.now()));
+  syncCues();
 }
 
 export function resume() {
   setSession(resumeSession(app.session, Date.now()));
-  playCues();
+  syncCues();
 }
 
 export function skip() {
-  engine.stop();
   setSession(skipPhase(app.session, currentWorkout(), Date.now()));
-  if (app.session.pausedAt === null) playCues(true);
+  syncCues(true);
   tick();
 }
 
@@ -240,10 +246,7 @@ export function setAudio(patch) {
   storage.saveSettings($state.snapshot(app.settings));
   if (!canSpeak()) cancelSpeech();
   // Re-schedule so the change applies now.
-  if (app.session) {
-    engine.stop();
-    if (app.session.pausedAt === null) playCues();
-  }
+  if (app.session) syncCues();
 }
 
 /** Live slider feedback while dragging: no saving or re-scheduling until setAudio on release. */
@@ -330,13 +333,13 @@ function beginRun(session) {
   app.screen = 'run';
   lastPhaseIndex = -1;
   setSession(session);
-  if (session.pausedAt === null) playCues(true);
+  syncCues(true);
   if (!engine.speaksInBackground) wakeLock.acquire();
   startTicking();
 }
 
-function playCues(announceCurrent = false) {
-  app.audioAvailable = engine.start(
+function syncCues(announceCurrent = false) {
+  app.audioAvailable = engine.sync(
     $state.snapshot(app.session), currentWorkout(), Date.now(), $state.snapshot(app.settings),
     { announceCurrent },
   );
@@ -360,8 +363,49 @@ function stopTicking() {
 // display stays correct, so returning must re-sync audio to the timer.
 function onVisibilityChange() {
   if (document.visibilityState !== 'visible') return;
+  if (engine.speaksInBackground) {
+    // Android: catch up with changes made from the watch while the page slept,
+    // before the stale local session can tick into a finish.
+    if (app.session) engine.checkRunState($state.snapshot(app.session));
+    tick();
+    return;
+  }
   tick();
-  if (app.session && app.session.pausedAt === null && !engine.speaksInBackground) playCues();
+  if (app.session && app.session.pausedAt === null) syncCues();
+}
+
+/**
+ * A change the Android service made on its own: a watch command, the finish
+ * while the page slept, or a stop.
+ * @param {import('../platform/native/runState.js').RunDecision} decision
+ */
+function applyRunState(decision) {
+  if (app.session) {
+    if (decision.type === 'stopped') {
+      endRun();
+      app.screen = 'workout';
+    } else if (decision.type === 'finished') {
+      // Confirmed by the service: finish directly (tick would ask it again).
+      setSession(decision.session);
+      finish(currentWorkout());
+    } else {
+      setSession(decision.session);
+      tick();
+    }
+    return;
+  }
+  if (!app.pendingResume) return;
+  if (decision.type === 'stopped') {
+    app.pendingResume = null;
+    storage.clearSession();
+  } else if (decision.type === 'finished') {
+    app.pendingResume = null;
+    app.workoutId = decision.session.workoutId;
+    finish(findWorkout(decision.session.workoutId));
+  } else {
+    app.pendingResume = decision.session;
+    storage.saveSession(decision.session);
+  }
 }
 
 function tick() {
@@ -370,7 +414,10 @@ function tick() {
   app.now = Date.now();
   const state = getState(app.session, workout, app.now);
   if (state.finished) {
-    finish(workout);
+    // Android: the watch may have paused the run while the page slept, so
+    // the service confirms the finish (answer through applyRunState).
+    if (engine.speaksInBackground) engine.confirmFinish($state.snapshot(app.session), workout);
+    else finish(workout);
     return;
   }
   if (!state.paused && state.phaseIndex !== lastPhaseIndex) {

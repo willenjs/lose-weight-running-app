@@ -36,7 +36,10 @@ dependencies {
     implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
     implementation project(':capacitor-android')
+    implementation "com.google.android.gms:play-services-wearable:$playServicesWearableVersion"
     testImplementation "junit:junit:$junitVersion"
+    // Local unit tests run on the JVM, where Android's org.json is only a stub.
+    testImplementation "org.json:json:$orgJsonVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
     implementation project(':capacitor-cordova-android-plugins')

@@ -62,12 +62,31 @@ icons in `android/app/src/main/res/mipmap-*` were resized from `assets/`
 5. Leave the phone locked for a full 30+ minute workout: no cue is missed or
    more than about a second late.
 
+### Manual watch test (Galaxy Watch8 + Android app)
+
+Install both apps (`npm run android:install`, `npm run wear:install`) and
+open PulseRun on the watch once (allow notifications).
+
+1. Open the watch app: the dot under the text turns mint (phone reachable).
+2. Start a workout on the phone: the watch app opens, or a PulseRun chip /
+   "tap to open" prompt appears on the watch.
+3. Lock the phone. From the watch: pause, resume, skip, stop (with confirm).
+   The phone's cues follow each change within a couple of seconds.
+4. Screen off on the watch: it buzzes at each phase change (Walk one long,
+   Jog two short, Run three short, finish long–short–long).
+5. Lower the wrist: the always-on screen shows the phase and countdown.
+6. Walk out of Bluetooth range and back mid-run: the watch keeps counting,
+   commands show "Phone not reachable" while away, and it catches up.
+7. Kill the phone app mid-run: a watch command shows "Phone not reachable";
+   reopening the phone app offers to resume.
+
 ## Project layout
 
 - `src/core/` — plan data, timer, cue schedule, progress. Pure JavaScript, no browser APIs.
 - `src/platform/` — browser adapters: Web Audio, speech, wake lock, localStorage, Web Share/clipboard.
 - `src/platform/native/` — the Android app's cue engine and plugin bridge.
 - `android/` — Capacitor Android project, including the native coach service.
+- `android/wear/` — Wear OS companion app (Kotlin, Compose for Wear OS).
 - `src/i18n/` — text resources (`pt.js` default, `en.js`).
 - `src/ui/` — Svelte 5 screens; `controller.svelte.js` holds app state and actions.
 - `layout-target/` — design mockups (HTML, screenshots, design notes) the UI follows.
