@@ -23,7 +23,7 @@ fun hapticPlan(state: RunState, now: Long): List<Haptic> {
     val elapsed = state.elapsedMs(now)
     val workoutStart = now - elapsed
     val plan = state.phases.mapIndexedNotNull { i, phase ->
-        if (phase.startMs <= elapsed - HAPTIC_GRACE_MS) null
+        if (phase.startMs < elapsed - HAPTIC_GRACE_MS) null
         else Haptic("${state.runId}:$i", workoutStart + phase.startMs, kindOf(phase.type))
     }
     val finish = Haptic("${state.runId}:${state.phases.size}", workoutStart + state.totalMs, HapticKind.FINISH)

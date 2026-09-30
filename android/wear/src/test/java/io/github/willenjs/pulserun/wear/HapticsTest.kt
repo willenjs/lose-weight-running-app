@@ -34,6 +34,12 @@ class HapticsTest {
     }
 
     @Test
+    fun graceBoundaryIsInclusive() {
+        assertEquals("1000000:0", hapticPlan(state(), 1_000_000L + 2_000L).first().key)
+        assertEquals("1000000:1", hapticPlan(state(), 1_000_000L + 2_001L).first().key)
+    }
+
+    @Test
     fun plansNothingWhilePausedOrEnded() {
         assertTrue(hapticPlan(state(pausedAt = 1_010_000), 1_020_000).isEmpty())
         assertTrue(hapticPlan(state(ended = "stopped"), 1_020_000).isEmpty())
