@@ -25,6 +25,7 @@ object StartPrompt {
             .setContentText(title)
             .setContentIntent(open)
             .setAutoCancel(true)
+            .setOnlyAlertOnce(true)
             .setCategory(NotificationCompat.CATEGORY_WORKOUT)
             .build()
         manager.notify(NOTIFICATION_ID, notification)

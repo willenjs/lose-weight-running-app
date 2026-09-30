@@ -49,10 +49,15 @@ object RunRepository {
     fun load(context: Context) {
         val uri = Uri.Builder().scheme("wear").path(RUN_PATH).build()
         Wearable.getDataClient(context.applicationContext).getDataItems(uri).addOnSuccessListener { items ->
-            items.forEach { item ->
-                DataMapItem.fromDataItem(item).dataMap.getString("state")?.let(RunState::parse)?.let(::update)
+            try {
+                items.forEach { item ->
+                    runCatching {
+                        DataMapItem.fromDataItem(item).dataMap.getString("state")?.let(RunState::parse)?.let(::update)
+                    }
+                }
+            } finally {
+                items.release()
             }
-            items.release()
         }
     }
 

@@ -50,6 +50,7 @@ class WorkoutService : Service() {
     private val handler = Handler(Looper.getMainLooper())
     private val hapticsToken = Any()
     private val stopToken = Any()
+    private val refreshToken = Any()
     private val buzzed = mutableSetOf<String>()
     private var shownRunId = -1L
     private lateinit var wakeLock: PowerManager.WakeLock
@@ -68,7 +69,8 @@ class WorkoutService : Service() {
         // Must reach the foreground promptly after startForegroundService.
         startForeground(NOTIFICATION_ID, notification(state).build(), ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
         StartPrompt.hide(this)
-        if (state == null) stopSelf()
+        // startForeground posted a plain notification: put the Ongoing Activity back on it.
+        if (state != null) showOngoing(state) else stopSelf()
         return START_NOT_STICKY
     }
 
@@ -78,9 +80,24 @@ class WorkoutService : Service() {
             bringToFront()
         }
         showOngoing(state)
+        planRefreshes(state)
         planHaptics(state)
         handler.removeCallbacksAndMessages(stopToken)
         if (state.ended != null) HandlerCompat.postDelayed(handler, { stopSelf() }, stopToken, STOP_AFTER_END_MS)
+    }
+
+    /** The phone publishes only on changes: redraw the chip at every phase boundary and at the finish. */
+    private fun planRefreshes(state: RunState) {
+        handler.removeCallbacksAndMessages(refreshToken)
+        if (state.ended != null || state.session.pausedAt != null) return
+        val now = System.currentTimeMillis()
+        val elapsed = state.elapsedMs(now)
+        val workoutStart = now - elapsed
+        val uptime = SystemClock.uptimeMillis()
+        state.phases.filter { it.endMs > elapsed }.forEach { phase ->
+            val at = uptime + (workoutStart + phase.endMs - now).coerceAtLeast(0) + 50
+            handler.postAtTime({ RunRepository.state.value?.let { showOngoing(it) } }, refreshToken, at)
+        }
     }
 
     private fun planHaptics(state: RunState) {
@@ -128,7 +145,7 @@ class WorkoutService : Service() {
         val builder = notification(state)
         val view = state.view(System.currentTimeMillis())
         val status = when {
-            state.ended == "finished" -> Status.Builder().addTemplate(state.label("done")).build()
+            state.ended == "finished" || view.finished -> Status.Builder().addTemplate(state.label("done")).build()
             state.ended != null -> Status.Builder().addTemplate(state.title).build()
             view.paused -> Status.Builder().addTemplate(state.label("paused")).build()
             else -> Status.Builder()
