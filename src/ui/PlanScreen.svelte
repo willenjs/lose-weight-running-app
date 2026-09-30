@@ -1,12 +1,13 @@
 <script>
   import { PLAN, groupByWeek } from '../core/plan.js';
   import { nextWorkout, programStats } from '../core/progress.js';
-  import { app, t, openWorkout, workoutMinutes, phaseShorthand } from './controller.svelte.js';
+  import { app, t, openWorkout, workoutMinutes, phaseShorthand, exit, cancelExit } from './controller.svelte.js';
   import AppHeader from './components/AppHeader.svelte';
   import Icon from './components/Icon.svelte';
   import PhaseBar from './components/PhaseBar.svelte';
   import WeekAccordion from './components/WeekAccordion.svelte';
   import ResumeDialog from './components/ResumeDialog.svelte';
+  import ConfirmDialog from './components/ConfirmDialog.svelte';
 
   const RING_RADIUS = 34;
   const RING_LENGTH = 2 * Math.PI * RING_RADIUS;
@@ -89,6 +90,16 @@
   </section>
 
   {#if app.pendingResume}<ResumeDialog />{/if}
+  {#if app.confirmingExit}
+    <ConfirmDialog
+      title={t('exit.title')}
+      body={t('exit.body')}
+      confirmLabel={t('exit.leave')}
+      cancelLabel={t('exit.stay')}
+      onconfirm={exit}
+      oncancel={cancelExit}
+    />
+  {/if}
 </div>
 
 <style>

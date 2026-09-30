@@ -13,6 +13,8 @@ import { createWakeLock } from '../platform/wakeLock.js';
 import { share, canShare } from '../platform/share.js';
 import { normalizeAudioSettings, isMuted, testSequence } from '../core/audioSettings.js';
 import { coachExtras } from '../core/coach.js';
+import { backAction } from '../core/navigation.js';
+import { createBackButton } from '../platform/backButton.js';
 import { phaseLine, speechText } from '../i18n/cueText.js';
 
 export { VOICE_STYLES } from '../core/audioSettings.js';
@@ -48,6 +50,7 @@ export const app = $state({
   audioSheetOpen: false,
   audioTesting: false,
   confirmingStop: false,
+  confirmingExit: false,
   /** @type {string | null} */
   toast: null,
   canShare: canShare(),
@@ -81,10 +84,13 @@ let ticker = null;
 let finishTimer = null;
 let lastPhaseIndex = -1;
 let toastTimer = null;
+/** @type {{ leave: () => void } | null} */
+let backButton = null;
 
 export function init() {
   const savedLang = storage.loadLang();
   applyLang(LANGS.includes(savedLang) ? savedLang : DEFAULT_LANG);
+  backButton = createBackButton(onBack);
 
   const saved = storage.loadSession();
   if (!saved) return;
@@ -185,6 +191,39 @@ export function stop() {
   engine.stop();
   endRun();
   app.screen = 'workout';
+}
+
+export function requestExit() {
+  app.confirmingExit = true;
+}
+
+export function cancelExit() {
+  app.confirmingExit = false;
+}
+
+export function exit() {
+  app.confirmingExit = false;
+  backButton?.leave();
+}
+
+/** Back button: close the topmost overlay, else go up one screen; never leaves without asking. */
+function onBack() {
+  const action = backAction({
+    screen: app.screen,
+    audioSheetOpen: app.audioSheetOpen,
+    confirmingStop: app.confirmingStop,
+    confirmingExit: app.confirmingExit,
+    resumePending: app.pendingResume !== null,
+  });
+  switch (action) {
+    case 'closeSheet': closeAudioSheet(); break;
+    case 'cancelStop': cancelStop(); break;
+    case 'cancelExit': cancelExit(); break;
+    case 'confirmStop': requestStop(); break;
+    case 'confirmExit': requestExit(); break;
+    case 'toWorkout': openWorkout(app.workoutId); window.scrollTo(0, 0); break;
+    case 'toPlan': goToPlan(); window.scrollTo(0, 0); break;
+  }
 }
 
 export function openAudioSheet() {
