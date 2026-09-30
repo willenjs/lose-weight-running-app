@@ -5,15 +5,20 @@ import { testSequence } from '../core/audioSettings.js';
 /**
  * @typedef {{
  *   speaksInBackground: boolean,
- *   start(session: import('../core/timer.js').Session, workout: import('../core/plan.js').Workout,
+ *   sync(session: import('../core/timer.js').Session, workout: import('../core/plan.js').Workout,
  *     now: number, settings: import('../core/audioSettings.js').AudioSettings,
  *     options: { announceCurrent: boolean }): boolean,
  *   stop(): void,
  *   test(settings: import('../core/audioSettings.js').AudioSettings, sampleText: string | null,
  *     onDone: () => void): void,
+ *   onRunState(listener: (decision: import('./native/runState.js').RunDecision) => void): void,
+ *   checkRunState(session: import('../core/timer.js').Session): void,
  * }} CueEngine
- * Plays a workout's cues. `speaksInBackground` engines speak the phase
- * lines themselves; otherwise the controller speaks them while visible.
+ * Plays a workout's cues. `sync` is called after every session change (start,
+ * pause, resume, skip, settings, language) and returns whether audio is
+ * available. `speaksInBackground` engines speak the phase lines themselves;
+ * otherwise the controller speaks them while visible. Only the Android
+ * engine reports run states (changes made from the watch).
  */
 
 /**
@@ -31,12 +36,16 @@ export function createWebCueEngine({ locales }) {
   return {
     speaksInBackground: false,
     // announceCurrent is ignored: the controller's tick announces phases here.
-    start(session, workout, now, settings) {
+    sync(session, workout, now, settings) {
+      player.stop();
+      if (session.pausedAt !== null) return true;
       return player.start(session, workout, now, settings);
     },
     stop() {
       player.stop();
     },
+    onRunState() {},
+    checkRunState() {},
     test(settings, sampleText, onDone) {
       const run = ++testRun;
       clearTimeout(testTimer);
