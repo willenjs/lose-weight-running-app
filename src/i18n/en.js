@@ -88,6 +88,7 @@ export default {
   'cue.finish': 'Workout complete!',
   'notification.channel': 'Workout',
   'notification.running': 'Workout in progress',
+  'notification.paused': 'Workout paused',
   'audio.title': 'Audio & Volume',
   'audio.subtitle': 'Tuned for headphones or the treadmill speaker',
   'audio.close': 'Close',
@@ -130,4 +131,6 @@ export default {
   'unit.second.one': '{n} second',
   'unit.second.other': '{n} seconds',
   'unit.and': ' and ',
+  'watch.idle': 'Start a workout on your phone',
+  'watch.unreachable': 'Phone not reachable',
 };

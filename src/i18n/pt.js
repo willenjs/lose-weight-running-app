@@ -88,6 +88,7 @@ export default {
   'cue.finish': 'Treino concluído!',
   'notification.channel': 'Treino',
   'notification.running': 'Treino em andamento',
+  'notification.paused': 'Treino pausado',
   'audio.title': 'Áudio & Volume',
   'audio.subtitle': 'Otimizado para fones ou alto-falante da esteira',
   'audio.close': 'Fechar',
@@ -130,4 +131,6 @@ export default {
   'unit.second.one': '{n} segundo',
   'unit.second.other': '{n} segundos',
   'unit.and': ' e ',
+  'watch.idle': 'Inicie um treino no celular',
+  'watch.unreachable': 'Celular fora de alcance',
 };
