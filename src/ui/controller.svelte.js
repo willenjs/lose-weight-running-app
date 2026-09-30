@@ -3,7 +3,7 @@ import {
   startSession, pauseSession, resumeSession, skipPhase, getState, shouldOfferResume,
 } from '../core/timer.js';
 import { markDone, unmark, programStats } from '../core/progress.js';
-import { translate, formatDuration, LANGS, DEFAULT_LANG, LOCALES, VOICE_LOCALES } from '../i18n/index.js';
+import { translate, LANGS, DEFAULT_LANG, LOCALES, VOICE_LOCALES } from '../i18n/index.js';
 import { createStorage } from '../platform/storage.js';
 import { createCuePlayer } from '../platform/audio.js';
 import { speak, cancelSpeech } from '../platform/speech.js';
@@ -11,6 +11,7 @@ import { createWakeLock } from '../platform/wakeLock.js';
 import { share, canShare } from '../platform/share.js';
 import { normalizeAudioSettings, isMuted, testSequence } from '../core/audioSettings.js';
 import { coachExtras } from '../core/coach.js';
+import { phaseLine } from '../i18n/cueText.js';
 
 export { VOICE_STYLES } from '../core/audioSettings.js';
 
@@ -200,7 +201,7 @@ export function testAudio() {
   app.audioTesting = true;
   // Unlock audio within the tap, even when the voice goes first.
   cuePlayer.test([], settings);
-  if (!withVoice || !say(phaseLine('run', TEST_PHASE_SECONDS, voiceExtras), { onEnd: playTones })) playTones();
+  if (!withVoice || !say(phaseLine(app.lang, 'run', TEST_PHASE_SECONDS, voiceExtras), { onEnd: playTones })) playTones();
 }
 
 export function audioMuted() {
@@ -321,14 +322,7 @@ function tick() {
 function announcePhase(workout, phaseIndex, remainingMs) {
   const phase = workout.phases[phaseIndex];
   const extras = coachExtras(workout, phaseIndex, app.settings.voiceStyle);
-  say(phaseLine(phase.type, Math.round(remainingMs / 1000), extras));
-}
-
-/** "Walk for 5 minutes", followed by any coach lines (i18n keys). */
-function phaseLine(type, seconds, extraKeys) {
-  const command = t('cue.phase', { phase: t(`phase.${type}`), duration: formatDuration(seconds, app.lang) });
-  const extras = extraKeys.map((key) => t(key));
-  return extras.length ? `${command}. ${extras.join(' ')}` : command;
+  say(phaseLine(app.lang, phase.type, Math.round(remainingMs / 1000), extras));
 }
 
 function canSpeak() {

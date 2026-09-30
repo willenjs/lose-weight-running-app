@@ -86,6 +86,8 @@ export default {
   'run.noAudio': 'Áudio indisponível. Acompanhe o cronômetro na tela.',
   'cue.phase': '{phase} por {duration}',
   'cue.finish': 'Treino concluído!',
+  'notification.channel': 'Treino',
+  'notification.running': 'Treino em andamento',
   'audio.title': 'Áudio & Volume',
   'audio.subtitle': 'Otimizado para fones ou alto-falante da esteira',
   'audio.close': 'Fechar',

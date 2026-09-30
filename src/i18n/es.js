@@ -86,6 +86,8 @@ export default {
   'run.noAudio': 'Audio no disponible. Sigue el cronómetro en pantalla.',
   'cue.phase': '{phase} por {duration}',
   'cue.finish': '¡Entrenamiento completado!',
+  'notification.channel': 'Entrenamiento',
+  'notification.running': 'Entrenamiento en curso',
   'audio.title': 'Audio y volumen',
   'audio.subtitle': 'Optimizado para audífonos o el altavoz de la caminadora',
   'audio.close': 'Cerrar',

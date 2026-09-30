@@ -86,6 +86,8 @@ export default {
   'run.noAudio': 'Audio unavailable. Follow the on-screen timer.',
   'cue.phase': '{phase} for {duration}',
   'cue.finish': 'Workout complete!',
+  'notification.channel': 'Workout',
+  'notification.running': 'Workout in progress',
   'audio.title': 'Audio & Volume',
   'audio.subtitle': 'Tuned for headphones or the treadmill speaker',
   'audio.close': 'Close',
