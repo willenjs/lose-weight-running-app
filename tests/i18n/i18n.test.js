@@ -98,6 +98,12 @@ describe('PulseRun copy', () => {
     ];
     for (const lang of LANGS) for (const key of keys) expect(translate(lang, key), `${lang} ${key}`).not.toBe(key);
   });
+
+  it('names the three paces in the splash tagline', () => {
+    expect(translate('pt', 'splash.tagline')).toBe('Caminhar · Trotar · Correr');
+    expect(translate('en', 'splash.tagline')).toBe('Walk · Jog · Run');
+    expect(translate('es', 'splash.tagline')).toBe('Caminar · Trotar · Correr');
+  });
 });
 
 describe('Spanish', () => {

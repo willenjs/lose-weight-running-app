@@ -13,7 +13,7 @@
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:label="PulseRun"
-        android:theme="@android:style/Theme.DeviceDefault">
+        android:theme="@style/PulseTheme">
 
         <!-- A companion: it needs the phone app. -->
         <meta-data
