@@ -43,5 +43,14 @@
                 <data android:scheme="wear" android:host="*" android:pathPrefix="/pulserun/" />
             </intent-filter>
         </service>
+
+        <service
+            android:name=".WorkoutService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Mirrors a workout running on the paired phone: countdown and phase-change haptics." />
+        </service>
     </application>
 </manifest>
