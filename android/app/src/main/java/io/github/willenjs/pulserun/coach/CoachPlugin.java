@@ -27,6 +27,23 @@ public class CoachPlugin extends Plugin {
     private CuePlayer testPlayer;
     private int testRun = 0;
 
+    /** Starts (or replaces) the workout timeline in the foreground service. */
+    @PluginMethod
+    public void start(PluginCall call) {
+        try {
+            CoachService.start(getContext(), call.getData().toString());
+            call.resolve();
+        } catch (RuntimeException e) {
+            call.reject("Could not start the workout service", e);
+        }
+    }
+
+    @PluginMethod
+    public void stop(PluginCall call) {
+        CoachService.stop(getContext());
+        call.resolve();
+    }
+
     /** Plays the sample line (if any), then the tones one after another; resolves when done. */
     @PluginMethod
     public void test(PluginCall call) {
