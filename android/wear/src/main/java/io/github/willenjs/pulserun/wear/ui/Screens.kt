@@ -25,6 +25,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,6 +47,7 @@ import io.github.willenjs.pulserun.wear.fillNext
 import io.github.willenjs.pulserun.wear.formatClock
 import io.github.willenjs.pulserun.wear.formatMinutes
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 private const val PREFS = "watch"
 private const val PREF_OVERVIEW = "overview"
@@ -123,6 +125,7 @@ private fun AmbientScreen(state: RunState, now: Long) {
 private fun RunPager(state: RunState, now: Long) {
     val context = LocalContext.current
     val pager = rememberPagerState { 2 }
+    val scope = rememberCoroutineScope()
     var confirmingStop by remember { mutableStateOf(false) }
     val unreachable by RunRepository.unreachable.collectAsState()
     if (confirmingStop) {
@@ -133,7 +136,11 @@ private fun RunPager(state: RunState, now: Long) {
         return
     }
     HorizontalPager(pager, Modifier.fillMaxSize()) { page ->
-        if (page == 0) RunPage(state, now) else ControlsPage(state, onSkip = { RunRepository.send(context, "skip") }, onStop = { confirmingStop = true })
+        if (page == 0) RunPage(state, now) else ControlsPage(state, onSkip = {
+            RunRepository.send(context, "skip")
+            // Back to the countdown so the new phase shows at once.
+            scope.launch { pager.animateScrollToPage(0) }
+        }, onStop = { confirmingStop = true })
     }
     PageDots(pager.currentPage)
     if (unreachable) {
