@@ -3,6 +3,13 @@ package io.github.willenjs.pulserun.wear
 import org.json.JSONObject
 import kotlin.math.ceil
 
+/** RESUME_MAX_AGE_MS in src/core/timer.js: the phone abandons a paused run older than this. */
+const val RESUME_MAX_AGE_MS = 2 * 60 * 60 * 1000L
+/** A run still active by its data this long after its end by the clock: the phone is gone. */
+const val OVER_STALE_MS = 30_000L
+/** A finished run shows the finish screen for at most this long after its end. */
+const val FINISHED_STALE_MS = 60_000L
+
 data class Phase(val type: String, val startMs: Long, val endMs: Long)
 
 data class Session(
@@ -67,6 +74,29 @@ data class RunState(
             finished = finished,
         )
     }
+
+    /**
+     * When this run stops being worth following (the watch then shows Idle and
+     * stops its service): a finished run a minute after its end, an active one
+     * 30 s after its end by the clock or, paused, when the phone would abandon
+     * it. Null: never (a stopped run, which ends on its own).
+     */
+    fun staleAt(): Long? {
+        val endsAt = session.startedAt + session.pausedTotalMs - session.skippedMs + totalMs
+        val pausedAt = session.pausedAt
+        return when (ended) {
+            null -> {
+                // A paused run only reaches its end if it was already there when paused.
+                val over = if (pausedAt == null || endsAt <= pausedAt) endsAt + OVER_STALE_MS else null
+                val abandoned = if (pausedAt != null) session.startedAt + RESUME_MAX_AGE_MS else null
+                listOfNotNull(over, abandoned).minOrNull()
+            }
+            "finished" -> endsAt + FINISHED_STALE_MS
+            else -> null
+        }
+    }
+
+    fun isStale(now: Long): Boolean = staleAt()?.let { now >= it } ?: false
 
     companion object {
         fun parse(json: String): RunState? = try {

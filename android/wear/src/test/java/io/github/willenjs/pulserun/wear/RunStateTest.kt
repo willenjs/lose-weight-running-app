@@ -92,4 +92,54 @@ class RunStateTest {
     fun fillsTheNextTemplate() {
         assertEquals("Next: Walk 01:30", fillNext("Next: {phase} {time}", "Walk", "01:30"))
     }
+
+    private val t0 = 1_000_000L
+    private val total = 1_260_000L
+
+    private fun staleState(pausedAt: Long? = null, pausedTotalMs: Long = 0, skippedMs: Long = 0, ended: Any = JSONObject.NULL) =
+        RunState.parse(stateJson(
+            JSONObject().put("startedAt", t0).put("pausedAt", pausedAt ?: JSONObject.NULL)
+                .put("pausedTotalMs", pausedTotalMs).put("skippedMs", skippedMs),
+            ended,
+        ))!!
+
+    @Test
+    fun aRunningRunGoesStale30sAfterItsEnd() {
+        val state = staleState(pausedTotalMs = 60_000, skippedMs = 10_000)
+        val endsAt = t0 + 60_000 - 10_000 + total
+        assertEquals(endsAt + OVER_STALE_MS, state.staleAt())
+        assertFalse(state.isStale(t0 + 100_000))
+        assertFalse(state.isStale(endsAt + OVER_STALE_MS - 1))
+        assertTrue(state.isStale(endsAt + OVER_STALE_MS))
+    }
+
+    @Test
+    fun aPausedRunGoesStaleWhenThePhoneWouldAbandonIt() {
+        val state = staleState(pausedAt = t0 + 100_000)
+        assertEquals(t0 + RESUME_MAX_AGE_MS, state.staleAt())
+        assertFalse(state.isStale(t0 + total + OVER_STALE_MS + 1))
+        assertFalse(state.isStale(t0 + RESUME_MAX_AGE_MS - 1))
+        assertTrue(state.isStale(t0 + RESUME_MAX_AGE_MS))
+    }
+
+    @Test
+    fun aRunPausedAtItsEndGoesStale30sAfterIt() {
+        val state = staleState(pausedAt = t0 + total + 5_000)
+        assertEquals(t0 + total + OVER_STALE_MS, state.staleAt())
+    }
+
+    @Test
+    fun aFinishedRunGoesStaleAMinuteAfterItsEnd() {
+        val state = staleState(skippedMs = 20_000, ended = "finished")
+        val endsAt = t0 - 20_000 + total
+        assertFalse(state.isStale(endsAt + FINISHED_STALE_MS - 1))
+        assertTrue(state.isStale(endsAt + FINISHED_STALE_MS))
+    }
+
+    @Test
+    fun aStoppedRunNeverGoesStale() {
+        val state = staleState(ended = "stopped")
+        assertNull(state.staleAt())
+        assertFalse(state.isStale(t0 + 10 * RESUME_MAX_AGE_MS))
+    }
 }

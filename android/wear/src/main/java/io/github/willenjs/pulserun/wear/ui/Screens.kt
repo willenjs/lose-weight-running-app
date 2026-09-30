@@ -66,7 +66,8 @@ fun PulseApp(ambient: Boolean, ambientTick: Long, onFinished: () -> Unit) {
     Box(Modifier.fillMaxSize().background(if (ambient) Color.Black else Pulse.surface)) {
         val s = state
         when {
-            s == null || s.ended == "stopped" -> IdleScreen(s)
+            // Stale: the phone is gone, or the run ended long ago (no finish screen for an old run).
+            s == null || s.ended == "stopped" || s.isStale(now) -> IdleScreen(s)
             s.ended == "finished" -> DoneScreen(s, onFinished)
             ambient -> AmbientScreen(s, now)
             else -> RunPager(s, now)

@@ -37,6 +37,6 @@ class MainActivity : ComponentActivity() {
         PhoneLink.ping(this)
         StartPrompt.hide(this)
         val state = RunRepository.state.value
-        if (state != null && state.ended == null) WorkoutService.ensureRunning(this)
+        if (state != null && state.ended == null && !state.isStale(System.currentTimeMillis())) WorkoutService.ensureRunning(this)
     }
 }

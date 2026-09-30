@@ -35,7 +35,14 @@ class WorkoutService : Service() {
         // How long the finish screen and chip stay after the run ends.
         private const val STOP_AFTER_END_MS = 10_000L
 
+        /** True from creation until the service stops itself or is destroyed. */
+        @Volatile
+        var running = false
+            private set
+
+        /** Starts the service for an active run; a no-op while it runs (it follows the repository itself). */
         fun ensureRunning(context: Context) {
+            if (running) return
             try {
                 ContextCompat.startForegroundService(context, Intent(context, WorkoutService::class.java))
             } catch (e: IllegalStateException) {
@@ -51,12 +58,14 @@ class WorkoutService : Service() {
     private val hapticsToken = Any()
     private val stopToken = Any()
     private val refreshToken = Any()
+    private val staleToken = Any()
     private val buzzed = mutableSetOf<String>()
     private var shownRunId = -1L
     private lateinit var wakeLock: PowerManager.WakeLock
 
     override fun onCreate() {
         super.onCreate()
+        running = true
         wakeLock = getSystemService(PowerManager::class.java)
             .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "PulseRun:watch").apply { setReferenceCounted(false) }
         getSystemService(NotificationManager::class.java)
@@ -70,20 +79,42 @@ class WorkoutService : Service() {
         startForeground(NOTIFICATION_ID, notification(state).build(), ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
         StartPrompt.hide(this)
         // startForeground posted a plain notification: put the Ongoing Activity back on it.
-        if (state != null) showOngoing(state) else stopSelf()
+        if (state != null && !state.isStale(System.currentTimeMillis())) showOngoing(state) else stopNow()
         return START_NOT_STICKY
     }
 
     private fun onState(state: RunState) {
+        handler.removeCallbacksAndMessages(stopToken)
+        handler.removeCallbacksAndMessages(staleToken)
+        if (state.isStale(System.currentTimeMillis())) {
+            // The phone is gone or the run long over: no chip, no buzzes.
+            stopNow()
+            return
+        }
         if (state.runId != shownRunId && state.ended == null) {
             shownRunId = state.runId
+            // The start buzz, also the fallback when the activity cannot come to the front.
+            // Shares phase 0's key, so the phase-0 buzz cannot follow it.
+            buzzOnce("${state.runId}:0", kindOf(state.phases[0].type))
             bringToFront()
         }
         showOngoing(state)
         planRefreshes(state)
         planHaptics(state)
-        handler.removeCallbacksAndMessages(stopToken)
-        if (state.ended != null) HandlerCompat.postDelayed(handler, { stopSelf() }, stopToken, STOP_AFTER_END_MS)
+        if (state.ended != null) HandlerCompat.postDelayed(handler, { stopNow() }, stopToken, STOP_AFTER_END_MS)
+        // No new state may come (phone killed): stop once this one is stale.
+        state.staleAt()?.let { at ->
+            val delay = (at - System.currentTimeMillis()).coerceAtLeast(0)
+            HandlerCompat.postDelayed(handler, { if (RunRepository.state.value?.isStale(System.currentTimeMillis()) != false) stopNow() }, staleToken, delay)
+        }
+    }
+
+    private fun stopNow() {
+        // Cleared first, so a run arriving while the service winds down starts it again.
+        running = false
+        handler.removeCallbacksAndMessages(null)
+        if (wakeLock.isHeld) wakeLock.release()
+        stopSelf()
     }
 
     /** The phone publishes only on changes: redraw the chip at every phase boundary and at the finish. */
@@ -113,7 +144,8 @@ class WorkoutService : Service() {
         plan.forEach { h ->
             handler.postAtTime({ buzzOnce(h.key, h.kind) }, hapticsToken, uptime + (h.atMs - now).coerceAtLeast(0))
         }
-        wakeLock.acquire((plan.last().atMs - now).coerceAtLeast(0) + 5_000)
+        // Past the finish buzz until the run goes stale, in case the phone never reports the finish.
+        wakeLock.acquire((plan.last().atMs - now).coerceAtLeast(0) + OVER_STALE_MS + 5_000)
     }
 
     private fun buzzOnce(key: String, kind: HapticKind) {
@@ -174,6 +206,7 @@ class WorkoutService : Service() {
     private fun phaseEndTimeZero(view: RunView): Long = SystemClock.elapsedRealtime() + view.phaseRemainingMs
 
     override fun onDestroy() {
+        running = false
         handler.removeCallbacksAndMessages(null)
         scope.cancel()
         if (wakeLock.isHeld) wakeLock.release()

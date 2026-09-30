@@ -19,7 +19,8 @@ class RunListenerService : WearableListenerService() {
                 DataMapItem.fromDataItem(event.dataItem).dataMap.getString("state")?.let(RunState::parse)
             }.getOrNull() ?: continue
             RunRepository.update(state)
-            if (state.ended == null) WorkoutService.ensureRunning(this)
+            val current = RunRepository.state.value ?: continue
+            if (current.ended == null && !current.isStale(System.currentTimeMillis())) WorkoutService.ensureRunning(this)
         }
     }
 }
