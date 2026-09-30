@@ -12,6 +12,7 @@
     "android:sync": "vite build && cap sync android",
     "android:build": "node scripts/android-build.mjs",
     "android:install": "node scripts/android-build.mjs --install",
+    "android:test": "node scripts/android-test.mjs",
     "wear:build": "node scripts/wear-build.mjs",
     "wear:install": "node scripts/wear-build.mjs --install"
   },
