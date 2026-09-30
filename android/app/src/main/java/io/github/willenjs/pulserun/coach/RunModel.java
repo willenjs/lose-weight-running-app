@@ -79,6 +79,20 @@ final class RunModel {
         revision = newRevision;
     }
 
+    /** Whether a saved state is a run that has not ended. */
+    static boolean isActive(JSONObject state) {
+        return state != null && state.has("runId") && state.isNull("ended");
+    }
+
+    /** A copy of a saved state (of a run no service holds any more) ended for [reason]. */
+    static JSONObject ended(JSONObject state, String reason, long newRevision) {
+        try {
+            return new JSONObject(state.toString()).put("ended", reason).put("revision", newRevision);
+        } catch (JSONException e) {
+            throw new IllegalStateException(e); // a copy of valid JSON: cannot happen
+        }
+    }
+
     /** What the page, the saved state and the watch get. */
     JSONObject toState() {
         JSONObject watch = payload.optJSONObject("watch");

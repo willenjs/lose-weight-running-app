@@ -109,4 +109,24 @@ public class RunModelTest {
         bad.remove("phases");
         RunModel.fromPayload(bad, 1);
     }
+
+    @Test
+    public void tellsActiveSavedStatesFromEndedOnes() throws Exception {
+        JSONObject active = RunModel.fromPayload(payload(), 3).toState();
+        assertTrue(RunModel.isActive(active));
+        assertFalse(RunModel.isActive(null));
+        assertFalse(RunModel.isActive(new JSONObject()));
+        assertFalse(RunModel.isActive(RunModel.ended(active, "stopped", 4)));
+    }
+
+    @Test
+    public void endsASavedStateWithANewRevision() throws Exception {
+        JSONObject active = RunModel.fromPayload(payload(), 3).toState();
+        JSONObject ended = RunModel.ended(active, "stopped", 4);
+        assertEquals("stopped", ended.getString("ended"));
+        assertEquals(4, ended.getLong("revision"));
+        assertEquals(T0, ended.getLong("runId"));
+        assertEquals(T0, ended.getJSONObject("session").getLong("startedAt"));
+        assertTrue(active.isNull("ended"));
+    }
 }

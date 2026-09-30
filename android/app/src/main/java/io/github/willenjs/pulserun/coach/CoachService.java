@@ -153,6 +153,9 @@ public class CoachService extends Service {
         if (run != null && run.ended() == null) {
             run.end("stopped", nextRevision());
             broadcast();
+        } else if (run == null) {
+            // The app was killed mid-run and the run discarded: tell the watch it is over.
+            endSavedRun();
         }
         clearEvents();
         // Only stops if no newer start has been requested since.
@@ -190,6 +193,26 @@ public class CoachService extends Service {
         stopLater(FINISH_GRACE_MS);
     }
 
+    /** A run paused for too long is over: end it everywhere, then stop. */
+    private void abandon() {
+        if (run != null && run.ended() == null) {
+            run.end("stopped", nextRevision());
+            broadcast();
+        }
+        stopNow();
+    }
+
+    /** Ends the saved run this service does not hold (its process died), so the page and the watch drop it. */
+    private void endSavedRun() {
+        JSONObject saved = savedState(this);
+        if (!RunModel.isActive(saved)) return;
+        JSONObject state = RunModel.ended(saved, "stopped", nextRevision());
+        getSharedPreferences(PREFS, MODE_PRIVATE).edit().putString(PREF_STATE, state.toString()).apply();
+        StateListener current = listener;
+        if (current != null) current.onState(state);
+        WatchLink.publish(this, state);
+    }
+
     /** Saves the state and tells the page, the watch and the notification. */
     private void broadcast() {
         JSONObject state = run.toState();
@@ -220,7 +243,7 @@ public class CoachService extends Service {
         if (run.session().paused()) {
             if (wakeLock.isHeld()) wakeLock.release();
             long abandonIn = Math.max(0, run.session().startedAt + RESUME_MAX_AGE_MS - now);
-            handler.postAtTime(() -> stopNow(), eventsToken, uptime + abandonIn);
+            handler.postAtTime(this::abandon, eventsToken, uptime + abandonIn);
             return;
         }
         long elapsed = run.elapsedMs(now);
