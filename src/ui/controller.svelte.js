@@ -6,12 +6,14 @@ import { markDone, unmark, programStats } from '../core/progress.js';
 import { translate, LANGS, DEFAULT_LANG, LOCALES, VOICE_LOCALES } from '../i18n/index.js';
 import { createStorage } from '../platform/storage.js';
 import { createWebCueEngine } from '../platform/webCueEngine.js';
+import { createNativeCueEngine } from '../platform/native/nativeCueEngine.js';
+import { Coach, isNativeApp } from '../platform/native/coachPlugin.js';
 import { speak, cancelSpeech } from '../platform/speech.js';
 import { createWakeLock } from '../platform/wakeLock.js';
 import { share, canShare } from '../platform/share.js';
 import { normalizeAudioSettings, isMuted, testSequence } from '../core/audioSettings.js';
 import { coachExtras } from '../core/coach.js';
-import { phaseLine } from '../i18n/cueText.js';
+import { phaseLine, speechText } from '../i18n/cueText.js';
 
 export { VOICE_STYLES } from '../core/audioSettings.js';
 
@@ -50,8 +52,29 @@ export const app = $state({
   toast: null,
   canShare: canShare(),
 });
+const webEngine = createWebCueEngine({ locales: () => VOICE_LOCALES[app.lang] });
 /** @type {import('../platform/webCueEngine.js').CueEngine} */
-let engine = createWebCueEngine({ locales: () => VOICE_LOCALES[app.lang] });
+let engine = isNativeApp()
+  ? createNativeCueEngine({
+    plugin: Coach,
+    locales: () => VOICE_LOCALES[app.lang],
+    speechText: (event) => speechText(event, app.lang),
+    notification: (workout) => ({
+      channel: t('notification.channel'),
+      title: t('workout.title', { week: workout.week, day: workout.day }),
+      text: t('notification.running'),
+    }),
+    onFailure: useWebEngine,
+  })
+  : webEngine;
+
+/** The native cue service failed: finish the session with web audio. */
+function useWebEngine(error) {
+  console.warn('Native cues failed; using web audio.', error);
+  if (engine === webEngine) return;
+  engine = webEngine;
+  if (app.session && app.session.pausedAt === null) playCues();
+}
 
 
 let ticker = null;
@@ -80,6 +103,11 @@ export function formatDate(iso) {
 export function setLang(lang) {
   applyLang(lang);
   storage.saveLang(lang);
+  // The native engine speaks pre-rendered text: re-send it in the new language.
+  if (engine.speaksInBackground && app.session && app.session.pausedAt === null) {
+    engine.stop();
+    playCues();
+  }
 }
 
 export function openWorkout(id) {
@@ -262,7 +290,7 @@ function beginRun(session) {
   lastPhaseIndex = -1;
   setSession(session);
   if (session.pausedAt === null) playCues(true);
-  wakeLock.acquire();
+  if (!engine.speaksInBackground) wakeLock.acquire();
   startTicking();
 }
 
@@ -292,7 +320,7 @@ function stopTicking() {
 function onVisibilityChange() {
   if (document.visibilityState !== 'visible') return;
   tick();
-  if (app.session && app.session.pausedAt === null) playCues();
+  if (app.session && app.session.pausedAt === null && !engine.speaksInBackground) playCues();
 }
 
 function tick() {
@@ -322,7 +350,7 @@ function canSpeak() {
 
 /** @param {{ onEnd?: () => void }} [options] @returns {boolean} whether speech started */
 function say(text, { onEnd } = {}) {
-  if (!canSpeak()) return false;
+  if (!canSpeak() || engine.speaksInBackground) return false;
   return speak(text, VOICE_LOCALES[app.lang], { volume: app.settings.voiceVolume, onEnd });
 }
 
@@ -331,7 +359,7 @@ function finish(workout) {
   endRun();
   app.screen = 'finished';
   say(t('cue.finish'));
-  finishTimer = setTimeout(() => engine.stop(), FINISH_AUDIO_GRACE_MS);
+  if (!engine.speaksInBackground) finishTimer = setTimeout(() => engine.stop(), FINISH_AUDIO_GRACE_MS);
 }
 
 function endRun() {

@@ -9,6 +9,7 @@ for what the app is; this file is about how to change it safely.
 - Test: `npm test` (vitest, runs `tests/**/*.test.js`)
 - Build: `npm run build`
 - Dev server: `npm run dev`
+- Android APK: `npm run android:build` (install over USB: `npm run android:install`)
 
 Before claiming a change is done, run `npm test` and `npm run build` and
 confirm both pass.
@@ -22,6 +23,9 @@ confirm both pass.
 - `src/ui/controller.svelte.js` is the only module that wires `core/` and
   `platform/` together and owns app state (`app`, a Svelte 5 `$state` object).
   Components call its exported actions; they do not call `platform/` directly.
+- `src/platform/native/` talks to the Android `Coach` plugin. In the app the
+  native engine speaks every cue itself (`speaksInBackground`), so the
+  controller must not speak or hold the screen wake lock there.
 - Svelte 5 runes only (`$state`, `$derived`, `$props`, `onclick=`); no
   legacy `export let`, `$:` or `on:click`.
 - No router, no TypeScript, no SvelteKit, no i18n library, no backend.
