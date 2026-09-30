@@ -1,13 +1,11 @@
 <script>
-  import { findWorkout, totalSeconds, phaseSeconds, phaseRole } from '../core/plan.js';
-  import { formatClock } from '../core/timer.js';
+  import { findWorkout, phaseSeconds, phaseRole } from '../core/plan.js';
   import {
     app, t, formatDate, goToPlan, startWorkout, unmarkWorkout, workoutMinutes,
   } from './controller.svelte.js';
   import AppHeader from './components/AppHeader.svelte';
   import Icon from './components/Icon.svelte';
   import PhaseBar from './components/PhaseBar.svelte';
-  import StatTile from './components/StatTile.svelte';
 
   /** @type {('walk' | 'jog' | 'run')[]} */
   const TYPES = ['walk', 'jog', 'run'];
@@ -15,119 +13,85 @@
   const workout = $derived(findWorkout(app.workoutId));
   const completedAt = $derived(app.progress.completed[app.workoutId]);
   const totals = $derived(phaseSeconds(workout));
-  const total = $derived(totalSeconds(workout));
-  const weekDay = $derived(t('common.weekDay', { week: workout.week, day: workout.day }));
 </script>
 
 <div class="screen">
-  <AppHeader subtitle={weekDay} onback={goToPlan} />
+  <AppHeader title={t('common.weekDay', { week: workout.week, day: workout.day })} onback={goToPlan} />
 
-  <section class="card hero">
-    <div class="hero-tags">
-      <span class="tag">{weekDay}</span>
-      <span class="chip"><Icon name="total-time" size={14} />{t('workout.total', { value: workoutMinutes(workout) })}</span>
-    </div>
-    <h1>{t('workout.heading')}</h1>
-    <p>{t(`week.${workout.week}.title`)} • {t(`week.${workout.week}.subtitle`)}</p>
+  <section class="summary">
+    <p class="label">{t(`week.${workout.week}.title`)}</p>
+    <p class="minutes num">{workoutMinutes(workout)}<span> {t('unit.min')}</span></p>
+    <PhaseBar {workout} thin />
+    <ul class="totals">
+      {#each TYPES as type (type)}
+        <li class="phase-{type}">
+          <span class="dot" aria-hidden="true"></span>{t(`phase.${type}`)}
+          <span class="num">{Math.round(totals[type] / 60)}</span>
+        </li>
+      {/each}
+    </ul>
   </section>
 
-  <div class="totals">
-    {#each TYPES as type (type)}
-      <StatTile
-        label={t(`phaseLabel.${type}`)}
-        value={Math.round(totals[type] / 60)}
-        unit={t('unit.min')}
-        caption={t('workout.ofVolume', { percent: Math.round((totals[type] / total) * 100) })}
-        tone={type}
-      />
-    {/each}
-  </div>
-
-  <section class="card timeline">
-    <div class="row">
-      <h2 class="section-title">{t('workout.timeline')}</h2>
-      <span class="label">{t('workout.phaseCount', { count: workout.phases.length })}</span>
-    </div>
-    <PhaseBar {workout} times />
-  </section>
-
-  <h2 class="section-title">{t('workout.phasesTitle')}</h2>
-  <ol class="phases">
+  <!-- A completed workout reads as crossed off, like the done days on the plan. -->
+  <ol class="phases" class:done={completedAt}>
     {#each workout.phases as phase, i (i)}
-      {@const role = phaseRole(workout, i)}
       <li class="phase phase-{phase.type}">
-        <span class="phase-badge"><Icon name={phase.type} size={26} /></span>
-        <div class="phase-text">
-          <p class="phase-label">{t('workout.phaseLabel', { n: i + 1, role: t(`role.${role}`) })}</p>
-          <p class="phase-name">{t(`phaseLabel.${phase.type}`)}</p>
-          <p class="phase-tip">{t(`tip.${role}`)}</p>
-        </div>
-        <div class="phase-side">
-          <p class="phase-time num">{formatClock(phase.seconds * 1000)}</p>
-          <span class="chip">{t(`pace.${phase.type}`)}</span>
-        </div>
+        <span class="strip" aria-hidden="true"></span>
+        <span class="phase-text">
+          <span class="phase-name">{t(`phase.${phase.type}`)}</span>
+          <span class="phase-tip">{t(`tip.${phaseRole(workout, i)}`)}</span>
+        </span>
+        <span class="phase-time num">{t('workout.total', { value: Math.round(phase.seconds / 60) })}</span>
       </li>
     {/each}
   </ol>
 
-  <section class="card note">
-    <span class="note-icon"><Icon name="bolt" size={20} /></span>
-    <div>
-      <p class="label mint">{t('workout.tipTitle')}</p>
-      <p>{t('workout.tipText')}</p>
-    </div>
-  </section>
-
-  {#if completedAt}
-    <p class="completed">
-      <Icon name="check" size={16} />{t('workout.done', { date: formatDate(completedAt) })}
-      <button class="btn-link" onclick={() => unmarkWorkout(workout.id)}>{t('workout.unmark')}</button>
-    </p>
-  {/if}
+  <p class="speed-tip"><Icon name="bolt" size={16} />{t('workout.tipText')}</p>
 
   <div class="sticky">
-    <button class="btn btn-primary" onclick={startWorkout}><Icon name="play-resume" />{t('workout.start')}</button>
+    {#if completedAt}
+      <p class="completed"><Icon name="check" size={16} />{t('workout.done', { date: formatDate(completedAt) })}</p>
+      <button class="btn btn-secondary" onclick={startWorkout}><Icon name="play-resume" />{t('workout.runAgain')}</button>
+      <button class="btn-link" onclick={() => unmarkWorkout(workout.id)}>{t('workout.unmarkDone')}</button>
+    {:else}
+      <button class="btn btn-primary" onclick={startWorkout}><Icon name="play-resume" />{t('plan.start')}</button>
+    {/if}
   </div>
 </div>
 
 <style>
-  .hero { display: flex; flex-direction: column; gap: 10px; background: linear-gradient(135deg, var(--surface-2), var(--surface-1)); }
-  .hero-tags { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
-  .hero h1 { margin: 0; font-family: var(--display-font); font-size: 30px; font-weight: 700; line-height: 1.1; }
-  .hero p { margin: 0; font-size: 14px; color: var(--text-muted); }
-  .totals { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-  .timeline { display: flex; flex-direction: column; gap: 14px; }
-  .row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
-  .section-title { margin: 0; font-family: var(--display-font); font-size: 16px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
-  .phases { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
-  .phase {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 14px;
-    border-radius: var(--radius);
-    background: var(--surface-1);
-    border: 1px solid var(--surface-2);
-    border-left: 4px solid var(--phase);
-  }
-  .phase-badge { flex: none; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 12px; background: var(--surface-2); color: var(--phase); }
-  .phase-text { flex: 1; min-width: 0; }
-  .phase-text p { margin: 0; }
-  .phase-label { font-family: var(--display-font); font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--phase); }
-  .phase-name { font-family: var(--display-font); font-size: 22px; font-weight: 700; text-transform: uppercase; line-height: 1.15; }
+  .screen { gap: 24px; }
+
+  .summary { display: flex; flex-direction: column; gap: 14px; margin-top: 8px; }
+  .minutes { margin: 0; font-size: 64px; font-weight: 700; line-height: 0.95; }
+  .minutes span { font-size: 24px; color: var(--text-muted); }
+  .totals { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 14px; color: var(--text-muted); }
+  .totals li { display: flex; align-items: center; gap: 6px; }
+  .totals .num { font-weight: 700; color: var(--text); }
+  .dot { width: 8px; height: 8px; border-radius: 9999px; background: var(--phase); }
+
+  .phases { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+  .phase { min-height: 56px; display: flex; align-items: center; gap: 14px; border-top: 1px solid var(--surface-2); }
+  .strip { flex: none; width: 4px; height: 32px; border-radius: var(--radius-sm); background: var(--phase); }
+  .phase-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .phase-name { font-size: 16px; font-weight: 600; }
   .phase-tip { font-size: 13px; color: var(--text-muted); }
-  .phase-side { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
-  .phase-time { margin: 0; font-size: 24px; font-weight: 700; color: var(--phase); }
-  .note { display: flex; gap: 12px; align-items: flex-start; }
-  .note p { margin: 0; font-size: 14px; line-height: 1.45; }
-  .note .label.mint { color: var(--mint); margin-bottom: 4px; }
-  .note-icon { flex: none; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; background: var(--mint-soft); color: var(--mint); }
-  .completed { display: flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: wrap; margin: 0; color: var(--mint); font-size: 14px; }
+  .phase-time { flex: none; font-size: 18px; font-weight: 700; color: var(--phase); }
+  .done .phase { opacity: 0.6; }
+  .done .phase-text, .done .phase-time { text-decoration: line-through; }
+
+  .speed-tip { margin: 0; display: flex; gap: 8px; font-size: 13px; line-height: 1.45; color: var(--text-muted); }
+  .speed-tip :global(.icon) { flex: none; margin-top: 2px; }
+
   .sticky {
     position: sticky;
     bottom: 0;
     margin-top: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
     padding: 12px 0 calc(8px + env(safe-area-inset-bottom));
     background: linear-gradient(to bottom, transparent, var(--surface-0) 35%);
   }
+  .completed { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 0 0 8px; color: var(--mint); font-size: 14px; }
 </style>

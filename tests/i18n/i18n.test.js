@@ -91,10 +91,10 @@ describe('PulseRun copy', () => {
     }
   });
 
-  it('has a label for every phase role, tip and pace', () => {
+  it('has a tip for every phase role and a short name for every phase', () => {
     const keys = [
-      ...['warmup', 'build', 'recovery', 'finale'].flatMap((r) => [`role.${r}`, `tip.${r}`]),
-      ...['walk', 'jog', 'run'].flatMap((p) => [`pace.${p}`, `short.${p}`]),
+      ...['warmup', 'build', 'recovery', 'finale'].map((r) => `tip.${r}`),
+      ...['walk', 'jog', 'run'].map((p) => `short.${p}`),
     ];
     for (const lang of LANGS) for (const key of keys) expect(translate(lang, key), `${lang} ${key}`).not.toBe(key);
   });

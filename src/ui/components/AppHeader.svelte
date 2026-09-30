@@ -3,8 +3,11 @@
   import Icon from './Icon.svelte';
   import logoUrl from '../logo.svg';
 
-  /** @type {{ subtitle?: string, onback?: () => void }} */
-  let { subtitle, onback } = $props();
+  /** @type {{ title?: string, subtitle?: string, onback?: () => void }} */
+  let { title, subtitle, onback } = $props();
+
+  // A screen may name itself (e.g. "Week 2 • Day 3") in place of the app name.
+  const heading = $derived(title ?? t('app.title'));
 </script>
 
 <header class="app-header">
@@ -14,11 +17,11 @@
   <button
     class="brand"
     onclick={goHome}
-    aria-label="{t('header.home')}: {t('app.title')}{subtitle ? `, ${subtitle}` : ''}"
+    aria-label="{t('header.home')}: {heading}{subtitle ? `, ${subtitle}` : ''}"
   >
     {#if !onback}<img class="logo" src={logoUrl} alt="" width="49" height="24" />{/if}
     <span class="brand-text">
-      <strong>{t('app.title')}</strong>
+      <strong>{heading}</strong>
       {#if subtitle}<span>{subtitle}</span>{/if}
     </span>
   </button>
