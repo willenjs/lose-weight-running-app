@@ -152,6 +152,8 @@ export function acceptResume() {
 export function discardResume() {
   app.pendingResume = null;
   storage.clearSession();
+  // The Android service may still be coaching the discarded run.
+  engine.stop();
 }
 
 export function pause() {

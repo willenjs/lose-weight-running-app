@@ -29,8 +29,9 @@ final class CuePlayer {
     static final boolean USE_AUDIO_FOCUS = true;
     // Matches SPEECH_RATE in src/platform/speech.js.
     private static final float SPEECH_RATE = 1.5f;
-    // Extra time before a finished tone's track is released.
-    private static final long TONE_RELEASE_MARGIN_MS = 100;
+    // Extra time before a finished tone's track is released: output that wakes
+    // from standby (screen off, Bluetooth) can start playback late.
+    private static final long TONE_RELEASE_MARGIN_MS = 1000;
 
     private final Handler handler;
     private final AudioManager audioManager;
@@ -94,14 +95,21 @@ final class CuePlayer {
                 .setTransferMode(AudioTrack.MODE_STATIC)
                 .setBufferSizeInBytes(pcm.length * 2)
                 .build();
-            track.write(pcm, 0, pcm.length);
-            track.setVolume(volume / 100f);
         } catch (RuntimeException e) {
             return;
         }
         hold();
+        try {
+            if (track.write(pcm, 0, pcm.length) != pcm.length) throw new IllegalStateException("short write");
+            track.setVolume(volume / 100f);
+            track.play();
+        } catch (RuntimeException e) {
+            // A failed tone must not take the workout down (e.g. audio server restart).
+            track.release();
+            release();
+            return;
+        }
         tracks.add(track);
-        track.play();
         long releaseAt = SystemClock.uptimeMillis() + ToneBank.durationMs(kind) + TONE_RELEASE_MARGIN_MS;
         handler.postAtTime(() -> {
             if (tracks.remove(track)) {

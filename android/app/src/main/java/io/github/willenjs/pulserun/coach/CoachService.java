@@ -32,11 +32,14 @@ import org.json.JSONObject;
  */
 public class CoachService extends Service {
     private static final String ACTION_START = "io.github.willenjs.pulserun.coach.START";
+    private static final String ACTION_STOP = "io.github.willenjs.pulserun.coach.STOP";
     private static final String EXTRA_PAYLOAD = "payload";
     private static final String CHANNEL_ID = "workout";
     private static final int NOTIFICATION_ID = 1;
     // Keeps the service up after the last cue starts, so the fanfare and finish line play out.
     private static final long FINISH_GRACE_MS = 15_000;
+    // Upper bound for the JS-to-service delivery lag that is compensated.
+    private static final long MAX_LAG_MS = 5_000;
 
     private final Object eventsToken = new Object();
     private HandlerThread thread;
@@ -49,8 +52,13 @@ public class CoachService extends Service {
         ContextCompat.startForegroundService(context, intent);
     }
 
+    /**
+     * Delivered through onStartCommand, in order with starts: stopService could
+     * destroy a just-requested foreground start before it calls startForeground,
+     * which crashes the app.
+     */
     static void stop(Context context) {
-        context.stopService(new Intent(context, CoachService.class));
+        context.startService(new Intent(context, CoachService.class).setAction(ACTION_STOP));
     }
 
     @Override
@@ -66,6 +74,15 @@ public class CoachService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        if (intent != null && ACTION_STOP.equals(intent.getAction())) {
+            handler.post(() -> {
+                handler.removeCallbacksAndMessages(eventsToken);
+                if (player != null) player.stopAll();
+            });
+            // Only stops if no newer start has been requested since.
+            if (stopSelfResult(startId) && wakeLock.isHeld()) wakeLock.release();
+            return START_NOT_STICKY;
+        }
         JSONObject payload = null;
         try {
             if (intent != null && ACTION_START.equals(intent.getAction())) {
@@ -77,11 +94,14 @@ public class CoachService extends Service {
         // Must reach the foreground promptly after startForegroundService, even on bad input.
         startInForeground(payload == null ? new JSONObject() : payload.optJSONObject("notification"));
         if (payload == null) {
-            stopSelf();
+            stopSelfResult(startId);
             return START_NOT_STICKY;
         }
         JSONObject timeline = payload;
-        handler.post(() -> schedule(timeline));
+        // Time the payload spent getting here (bridge, service start).
+        long lag = Math.max(0, Math.min(MAX_LAG_MS, System.currentTimeMillis() - payload.optLong("sentAt", System.currentTimeMillis())));
+        long sentAtUptime = SystemClock.uptimeMillis() - lag;
+        handler.post(() -> schedule(timeline, sentAtUptime, startId));
         return START_NOT_STICKY;
     }
 
@@ -108,7 +128,7 @@ public class CoachService extends Service {
     }
 
     /** Replaces whatever was scheduled with this timeline. Runs on the coach thread. */
-    private void schedule(JSONObject payload) {
+    private void schedule(JSONObject payload, long base, int startId) {
         handler.removeCallbacksAndMessages(eventsToken);
         if (player == null) {
             player = new CuePlayer(this, handler, CuePlayer.strings(payload.optJSONArray("locales")));
@@ -130,7 +150,6 @@ public class CoachService extends Service {
             toneLength.put(atMs, Math.max(lengthAt(toneLength, atMs), ToneBank.durationMs(tone)));
         }
 
-        long base = SystemClock.uptimeMillis();
         long lastMs = 0;
         for (int i = 0; i < events.length(); i++) {
             JSONObject event = events.optJSONObject(i);
@@ -151,8 +170,9 @@ public class CoachService extends Service {
         }
 
         long endMs = lastMs + FINISH_GRACE_MS;
-        wakeLock.acquire(endMs);
-        handler.postAtTime(this::stopSelf, eventsToken, base + endMs);
+        wakeLock.acquire(Math.max(0, base + endMs - SystemClock.uptimeMillis()));
+        // A newer start keeps the service running.
+        handler.postAtTime(() -> stopSelfResult(startId), eventsToken, base + endMs);
     }
 
     private static long lengthAt(Map<Long, Long> toneLength, long atMs) {

@@ -1,6 +1,9 @@
 import { buildTimeline } from '../../core/timeline.js';
 import { nativeEvents, nativeTest } from './payload.js';
 
+// A start delayed longer than this (the permission prompt) is rebuilt from the current time.
+const STALE_START_MS = 1000;
+
 /**
  * Cues played by the Android app's Coach plugin, which schedules the whole
  * timeline (tones and speech) in a foreground service, so they keep playing
@@ -14,10 +17,11 @@ import { nativeEvents, nativeTest } from './payload.js';
  *   speechText: (event: any) => string,
  *   notification: (workout: import('../../core/plan.js').Workout) => { channel: string, title: string, text: string },
  *   onFailure: (error: unknown) => void,
+ *   clock?: () => number,
  * }} options
  * @returns {import('../webCueEngine.js').CueEngine}
  */
-export function createNativeCueEngine({ plugin, locales, speechText, notification, onFailure }) {
+export function createNativeCueEngine({ plugin, locales, speechText, notification, onFailure, clock = Date.now }) {
   /** @type {Promise<unknown> | null} */
   let permission = null;
   // Bumped on every start and stop, so a start still waiting for the
@@ -29,14 +33,23 @@ export function createNativeCueEngine({ plugin, locales, speechText, notificatio
     speaksInBackground: true,
     start(session, workout, now, settings, { announceCurrent }) {
       const run = ++generation;
-      const data = {
-        events: nativeEvents(buildTimeline(session, workout, now, settings, { announceCurrent }), settings, speechText),
+      const calledAt = clock();
+      /** Timeline as of `at`; the native side offsets its clock by the delivery lag. */
+      const payload = (at, announce) => ({
+        events: nativeEvents(buildTimeline(session, workout, at, settings, { announceCurrent: announce }), settings, speechText),
         locales: locales(),
         notification: notification(workout),
-      };
+        sentAt: at,
+      });
       permission ??= plugin.requestPermissions().catch(() => {});
       permission
-        .then(() => (run === generation ? plugin.start(data) : undefined))
+        .then(() => {
+          if (run !== generation) return undefined;
+          const waited = clock() - calledAt;
+          // After a slow permission prompt, start from now and say where the runner is.
+          const data = waited > STALE_START_MS ? payload(now + waited, true) : payload(now, announceCurrent);
+          return plugin.start(data);
+        })
         .catch(onFailure);
       return true;
     },

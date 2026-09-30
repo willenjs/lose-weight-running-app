@@ -40,7 +40,11 @@ public class CoachPlugin extends Plugin {
 
     @PluginMethod
     public void stop(PluginCall call) {
-        CoachService.stop(getContext());
+        try {
+            CoachService.stop(getContext());
+        } catch (RuntimeException ignored) {
+            // Service not running and cannot be started from the background: nothing to stop.
+        }
         call.resolve();
     }
 

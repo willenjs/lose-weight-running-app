@@ -20,9 +20,10 @@ function fakePlugin() {
   };
 }
 
-function engineWith(plugin, onFailure = vi.fn()) {
+function engineWith(plugin, onFailure = vi.fn(), clock = () => T0) {
   return createNativeCueEngine({
     plugin,
+    clock,
     locales: () => ['en-US'],
     speechText: (event) => ('finish' in event ? 'done' : event.phaseType),
     notification: (workout) => ({ channel: 'Workout', title: `W${workout.week}D${workout.day}`, text: 'Running' }),
@@ -44,9 +45,24 @@ describe('createNativeCueEngine', () => {
     expect(plugin.start).toHaveBeenCalledTimes(1);
     const data = plugin.start.mock.calls[0][0];
     expect(data.locales).toEqual(['en-US']);
+    expect(data.sentAt).toBe(T0);
     expect(data.notification).toEqual({ channel: 'Workout', title: 'W1D1', text: 'Running' });
     expect(data.events[0]).toEqual({ type: 'tone', atMs: 0, tone: 'walk', volume: DEFAULT_AUDIO_SETTINGS.beepVolume });
     expect(data.events[1]).toEqual({ type: 'speech', atMs: 0, text: 'walk', volume: DEFAULT_AUDIO_SETTINGS.voiceVolume });
+  });
+
+  it('rebuilds the timeline when a slow permission prompt delayed the start', async () => {
+    const plugin = fakePlugin();
+    let time = T0;
+    const engine = engineWith(plugin, vi.fn(), () => time);
+    engine.start(startSession('w1d1', T0), w, T0, DEFAULT_AUDIO_SETTINGS, { announceCurrent: true });
+    time = T0 + 4000;
+    plugin.grant();
+    await flush();
+    const data = plugin.start.mock.calls[0][0];
+    expect(data.sentAt).toBe(T0 + 4000);
+    expect(data.events[0]).toEqual({ type: 'speech', atMs: 0, text: 'walk', volume: DEFAULT_AUDIO_SETTINGS.voiceVolume });
+    expect(data.events[1]).toEqual({ type: 'tone', atMs: 353_000, tone: 'pip', volume: DEFAULT_AUDIO_SETTINGS.beepVolume });
   });
 
   it('does not start after a stop that came while waiting for permission', async () => {
