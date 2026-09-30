@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   DEFAULT_AUDIO_SETTINGS, VOICE_STYLES,
-  normalizeAudioSettings, migrateAudioSettings, isMuted, testSequence, activeCues,
+  normalizeAudioSettings, migrateAudioSettings, isMuted, testSequence, activeCues, soloSettings,
 } from '../../src/core/audioSettings.js';
 
 describe('audio settings defaults', () => {
@@ -113,5 +113,28 @@ describe('testSequence', () => {
   it('plays nothing when every volume is 0', () => {
     expect(testSequence({ ...all, voiceVolume: 0, beepVolume: 0, fanfareVolume: 0 }))
       .toEqual({ speak: false, voiceExtras: [], tones: [] });
+  });
+});
+
+describe('soloSettings', () => {
+  const settings = { voiceVolume: 80, beepVolume: 40, fanfareVolume: 70, voiceStyle: 'intense' };
+
+  it('keeps only the chosen volume and the voice style', () => {
+    expect(soloSettings(settings, 'beepVolume')).toEqual({
+      voiceVolume: 0, beepVolume: 40, fanfareVolume: 0, voiceStyle: 'intense',
+    });
+    expect(soloSettings(settings, 'voiceVolume')).toEqual({
+      voiceVolume: 80, beepVolume: 0, fanfareVolume: 0, voiceStyle: 'intense',
+    });
+  });
+
+  it('makes the audio test play just that sound', () => {
+    expect(testSequence(soloSettings(settings, 'fanfareVolume'))).toEqual({ speak: false, voiceExtras: [], tones: ['finish'] });
+    expect(testSequence(soloSettings(settings, 'voiceVolume'))).toEqual({ speak: true, voiceExtras: ['coach.run'], tones: [] });
+  });
+
+  it('does not change the input', () => {
+    soloSettings(settings, 'beepVolume');
+    expect(settings.voiceVolume).toBe(80);
   });
 });

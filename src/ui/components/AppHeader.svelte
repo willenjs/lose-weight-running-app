@@ -1,10 +1,9 @@
 <script>
-  import { LANGS } from '../../i18n/index.js';
-  import { app, t, setLang, goHome, openAudioSheet, audioMuted, volumeIcon } from '../controller.svelte.js';
+  import { t, goHome, openAudioSheet, audioMuted } from '../controller.svelte.js';
   import Icon from './Icon.svelte';
   import logoUrl from '../logo.svg';
 
-  /** @type {{ subtitle: string, onback?: () => void }} */
+  /** @type {{ subtitle?: string, onback?: () => void }} */
   let { subtitle, onback } = $props();
 </script>
 
@@ -12,28 +11,26 @@
   {#if onback}
     <button class="icon-btn" onclick={onback} aria-label={t('workout.back')}><Icon name="back" /></button>
   {/if}
-  <button class="brand" onclick={goHome} aria-label="{t('header.home')}: {t('app.title')}, {subtitle}">
-    {#if !onback}<img class="logo" src={logoUrl} alt="" width="57" height="28" />{/if}
+  <button
+    class="brand"
+    onclick={goHome}
+    aria-label="{t('header.home')}: {t('app.title')}{subtitle ? `, ${subtitle}` : ''}"
+  >
+    {#if !onback}<img class="logo" src={logoUrl} alt="" width="49" height="24" />{/if}
     <span class="brand-text">
       <strong>{t('app.title')}</strong>
-      <span>{subtitle}</span>
+      {#if subtitle}<span>{subtitle}</span>{/if}
     </span>
   </button>
-  <div class="lang" role="group" aria-label={t('lang.label')}>
-    {#each LANGS as lang (lang)}
-      <button class:active={app.lang === lang} aria-pressed={app.lang === lang} onclick={() => setLang(lang)}>
-        {lang.toUpperCase()}
-      </button>
-    {/each}
-  </div>
   <button
-    class="icon-btn"
-    class:muted={audioMuted()}
+    class="icon-btn settings"
     onclick={openAudioSheet}
     aria-haspopup="dialog"
-    aria-label={t('header.audio')}
+    aria-label={audioMuted() ? t('header.settingsMuted') : t('header.settings')}
   >
-    <Icon name={volumeIcon()} />
+    <Icon name="ajustes" />
+    <!-- Stands in for the old speaker icon: shows that every sound is off. -->
+    {#if audioMuted()}<span class="muted-dot" aria-hidden="true"></span>{/if}
   </button>
 </header>
 
@@ -56,8 +53,17 @@
     color: var(--mint);
   }
   .icon-btn:first-child { color: var(--text); }
-  .icon-btn.muted { color: var(--text-muted); }
-  .logo { flex: none; display: block; width: 57px; height: 28px; }
+  .settings { position: relative; background: none; border-color: transparent; color: var(--text-muted); }
+  .muted-dot {
+    position: absolute;
+    top: 9px;
+    right: 9px;
+    width: 8px;
+    height: 8px;
+    border-radius: 9999px;
+    background: var(--run);
+  }
+  .logo { flex: none; display: block; width: 49px; height: 24px; }
   .brand {
     flex: 1;
     min-width: 0;
@@ -73,22 +79,4 @@
   .brand-text strong, .brand-text span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .brand-text strong { font-family: var(--display-font); font-size: 20px; line-height: 1.15; }
   .brand-text span { font-size: 12px; color: var(--text-muted); }
-  .lang {
-    flex: none;
-    display: flex;
-    padding: 3px;
-    border-radius: 9999px;
-    background: var(--surface-1);
-    border: 1px solid var(--surface-2);
-  }
-  .lang button {
-    min-width: 32px;
-    height: 36px;
-    border-radius: 9999px;
-    font-family: var(--display-font);
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--text-muted);
-  }
-  .lang button.active { background: var(--mint-soft); color: var(--mint); }
 </style>

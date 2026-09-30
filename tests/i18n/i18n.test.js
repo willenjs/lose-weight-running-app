@@ -120,11 +120,11 @@ describe('Spanish', () => {
   });
 });
 
-describe('audio sheet and coach texts', () => {
+describe('settings sheet and coach texts', () => {
   const keys = [
-    'header.audio', 'audio.title', 'audio.subtitle', 'audio.close',
-    'audio.beeps', 'audio.beepsHint', 'audio.voice', 'audio.voiceHint',
-    'audio.styleLabel', 'audio.fanfare', 'audio.fanfareHint', 'audio.test', 'audio.save',
+    'header.settings', 'header.settingsMuted', 'settings.title', 'settings.volume', 'audio.close',
+    'audio.beeps', 'audio.voice', 'audio.fanfare', 'audio.testOne', 'audio.styleLabel',
+    ...LANGS.map((lang) => `lang.${lang}`),
     ...VOICE_STYLES.map((style) => `audio.style.${style}`),
     ...['walk', 'jog', 'run', 'halfway', 'last'].map((line) => `coach.${line}`),
   ];
@@ -134,7 +134,7 @@ describe('audio sheet and coach texts', () => {
   });
 
   it('drop the master volume texts', () => {
-    for (const key of ['audio.master', 'audio.section', 'audio.beepLevel', 'audio.level.off']) expect(pt[key], key).toBeUndefined();
+    for (const key of ['audio.master', 'audio.section', 'audio.beepLevel', 'audio.level.off', 'audio.save', 'audio.test', 'header.audio']) expect(pt[key], key).toBeUndefined();
   });
 
   it('end coach lines with punctuation so they can be joined into one utterance', () => {

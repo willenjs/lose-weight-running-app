@@ -12,7 +12,7 @@ import { Coach, isNativeApp } from '../platform/native/coachPlugin.js';
 import { speak, cancelSpeech } from '../platform/speech.js';
 import { createWakeLock } from '../platform/wakeLock.js';
 import { share, canShare } from '../platform/share.js';
-import { normalizeAudioSettings, isMuted, testSequence } from '../core/audioSettings.js';
+import { normalizeAudioSettings, isMuted, testSequence, soloSettings } from '../core/audioSettings.js';
 import { coachExtras } from '../core/coach.js';
 import { backAction } from '../core/navigation.js';
 import { createBackButton } from '../platform/backButton.js';
@@ -50,7 +50,8 @@ export const app = $state({
   audioAvailable: true,
   settings: storage.loadSettings(),
   audioSheetOpen: false,
-  audioTesting: false,
+  /** The volume field whose test sound is playing, or null. */
+  audioTesting: null,
   confirmingStop: false,
   confirmingExit: false,
   /** @type {string | null} */
@@ -261,29 +262,22 @@ export function previewAudio(patch) {
 }
 
 /**
- * Plays each sound that has volume, in the order of the sliders: a sample
- * announcement, then the beeps, then the fanfare. Called from a tap.
+ * Plays one sound at its slider's volume: a sample announcement for the
+ * voice, the countdown for the beeps, or the fanfare. Called from a tap.
+ * @param {'voiceVolume' | 'beepVolume' | 'fanfareVolume'} field
  */
-export function testAudio() {
-  const settings = $state.snapshot(app.settings);
+export function testAudio(field) {
+  const settings = soloSettings($state.snapshot(app.settings), field);
   const { speak: withVoice, voiceExtras } = testSequence(settings);
   const sample = withVoice ? phaseLine(app.lang, 'run', TEST_PHASE_SECONDS, voiceExtras) : null;
-  app.audioTesting = true;
-  engine.test(settings, sample, () => { app.audioTesting = false; });
+  app.audioTesting = field;
+  engine.test(settings, sample, () => { if (app.audioTesting === field) app.audioTesting = null; });
 }
 
 export function audioMuted() {
   return isMuted(app.settings);
 }
 
-export function volumeIcon() {
-  return isMuted(app.settings) ? 'volume-off' : 'volume';
-}
-
-/** Voice language tag shown next to the voice coach, e.g. "PT-BR". */
-export function voiceTag() {
-  return LOCALES[app.lang].toUpperCase();
-}
 
 export async function shareResult() {
   const workout = findWorkout(app.workoutId);
