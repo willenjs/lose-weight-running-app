@@ -10,6 +10,7 @@ import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 import com.getcapacitor.annotation.Permission;
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 /** Bridge for src/platform/native/nativeCueEngine.js. */
@@ -27,7 +28,32 @@ public class CoachPlugin extends Plugin {
     private CuePlayer testPlayer;
     private int testRun = 0;
 
-    /** Starts (or replaces) the workout timeline in the foreground service. */
+    @Override
+    public void load() {
+        // The service reports every change it makes (watch commands, the finish) to the page.
+        CoachService.listener = state -> {
+            try {
+                notifyListeners("stateChanged", JSObject.fromJSONObject(state));
+            } catch (JSONException ignored) {
+                // Our own JSON; cannot happen.
+            }
+        };
+    }
+
+    /** The last state the service saved, so the page can catch up after sleeping. */
+    @PluginMethod
+    public void current(PluginCall call) {
+        JSONObject saved = CoachService.savedState(getContext());
+        JSObject result = new JSObject();
+        try {
+            result.put("state", saved == null ? JSONObject.NULL : JSObject.fromJSONObject(saved));
+        } catch (JSONException e) {
+            result.put("state", JSONObject.NULL);
+        }
+        call.resolve(result);
+    }
+
+    /** Starts or updates the run in the foreground service. */
     @PluginMethod
     public void start(PluginCall call) {
         try {
@@ -91,6 +117,7 @@ public class CoachPlugin extends Plugin {
 
     @Override
     protected void handleOnDestroy() {
+        CoachService.listener = null;
         main.removeCallbacksAndMessages(testToken);
         if (testPlayer != null) testPlayer.shutdown();
         super.handleOnDestroy();

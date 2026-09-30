@@ -19,33 +19,47 @@ import androidx.core.app.ServiceCompat;
 import androidx.core.content.ContextCompat;
 import io.github.willenjs.pulserun.R;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 /**
- * Plays a workout's whole cue timeline in the foreground, so cues stay on
- * time with the screen locked or another app in front. A partial wake lock
- * keeps the CPU (and the uptime clock the handler uses) running until the
- * last cue has played.
+ * Owns the workout run while it is active: holds the session the page sent,
+ * plays the part of the cue schedule still ahead in the foreground (so cues
+ * stay on time with the screen locked), applies pause / resume / skip / stop
+ * from the watch, and reports every change to the page, the saved state and
+ * the watch. A partial wake lock keeps the CPU (and the uptime clock the
+ * handler uses) running while cues are pending.
  */
 public class CoachService extends Service {
     private static final String ACTION_START = "io.github.willenjs.pulserun.coach.START";
     private static final String ACTION_STOP = "io.github.willenjs.pulserun.coach.STOP";
+    private static final String ACTION_COMMAND = "io.github.willenjs.pulserun.coach.COMMAND";
     private static final String EXTRA_PAYLOAD = "payload";
     private static final String CHANNEL_ID = "workout";
     private static final int NOTIFICATION_ID = 1;
-    // Keeps the service up after the last cue starts, so the fanfare and finish line play out.
+    private static final String PREFS = "coach";
+    private static final String PREF_STATE = "state";
+    private static final String PREF_REVISION = "revision";
+    // Keeps the service up after the finish, so the fanfare and finish line play out.
     private static final long FINISH_GRACE_MS = 15_000;
-    // Upper bound for the JS-to-service delivery lag that is compensated.
-    private static final long MAX_LAG_MS = 5_000;
+    // RESUME_MAX_AGE_MS in src/core/timer.js: a paused run older than this is abandoned.
+    private static final long RESUME_MAX_AGE_MS = 2 * 60 * 60 * 1000L;
+
+    /** Called on the coach thread with each new state; set by CoachPlugin. */
+    interface StateListener {
+        void onState(JSONObject state);
+    }
+
+    static volatile StateListener listener;
 
     private final Object eventsToken = new Object();
     private HandlerThread thread;
     private Handler handler;
     private CuePlayer player;
     private PowerManager.WakeLock wakeLock;
+    private RunModel run;
 
     static void start(Context context, String payload) {
         Intent intent = new Intent(context, CoachService.class).setAction(ACTION_START).putExtra(EXTRA_PAYLOAD, payload);
@@ -61,6 +75,22 @@ public class CoachService extends Service {
         context.startService(new Intent(context, CoachService.class).setAction(ACTION_STOP));
     }
 
+    /** A watch command. Only reaches a running service (it is in the foreground, so this is allowed). */
+    static void command(Context context, String json) {
+        context.startService(new Intent(context, CoachService.class).setAction(ACTION_COMMAND).putExtra(EXTRA_PAYLOAD, json));
+    }
+
+    /** The last state saved by the service, or null. */
+    static JSONObject savedState(Context context) {
+        String saved = context.getSharedPreferences(PREFS, MODE_PRIVATE).getString(PREF_STATE, null);
+        if (saved == null) return null;
+        try {
+            return new JSONObject(saved);
+        } catch (JSONException e) {
+            return null;
+        }
+    }
+
     @Override
     public void onCreate() {
         super.onCreate();
@@ -74,38 +104,176 @@ public class CoachService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        if (intent != null && ACTION_STOP.equals(intent.getAction())) {
-            handler.post(() -> {
-                handler.removeCallbacksAndMessages(eventsToken);
-                if (player != null) player.stopAll();
-            });
-            // Only stops if no newer start has been requested since.
-            if (stopSelfResult(startId) && wakeLock.isHeld()) wakeLock.release();
-            return START_NOT_STICKY;
-        }
-        JSONObject payload = null;
-        try {
-            if (intent != null && ACTION_START.equals(intent.getAction())) {
-                payload = new JSONObject(intent.getStringExtra(EXTRA_PAYLOAD));
+        String action = intent == null ? null : intent.getAction();
+        JSONObject data = parse(intent);
+        if (ACTION_START.equals(action)) {
+            // Must reach the foreground promptly after startForegroundService, even on bad input.
+            startInForeground(data == null ? null : data.optJSONObject("notification"), false);
+            if (data == null) {
+                stopSelfResult(startId);
+                return START_NOT_STICKY;
             }
-        } catch (JSONException | NullPointerException ignored) {
-            // Handled below.
-        }
-        // Must reach the foreground promptly after startForegroundService, even on bad input.
-        startInForeground(payload == null ? new JSONObject() : payload.optJSONObject("notification"));
-        if (payload == null) {
+            handler.post(() -> onPayload(data, startId));
+        } else if (ACTION_STOP.equals(action)) {
+            handler.post(() -> onStop(startId));
+        } else if (ACTION_COMMAND.equals(action)) {
+            handler.post(() -> onCommand(data, startId));
+        } else {
             stopSelfResult(startId);
-            return START_NOT_STICKY;
         }
-        JSONObject timeline = payload;
-        // Time the payload spent getting here (bridge, service start).
-        long lag = Math.max(0, Math.min(MAX_LAG_MS, System.currentTimeMillis() - payload.optLong("sentAt", System.currentTimeMillis())));
-        long sentAtUptime = SystemClock.uptimeMillis() - lag;
-        handler.post(() -> schedule(timeline, sentAtUptime, startId));
         return START_NOT_STICKY;
     }
 
-    private void startInForeground(JSONObject notification) {
+    private static JSONObject parse(Intent intent) {
+        try {
+            return intent == null ? null : new JSONObject(intent.getStringExtra(EXTRA_PAYLOAD));
+        } catch (JSONException | NullPointerException e) {
+            return null;
+        }
+    }
+
+    // ---- Changes (all on the coach thread) ----
+
+    private void onPayload(JSONObject payload, int startId) {
+        try {
+            run = RunModel.fromPayload(payload, nextRevision());
+        } catch (JSONException e) {
+            if (run == null) stopSelfResult(startId);
+            return;
+        }
+        broadcast();
+        reschedule(payload.optJSONObject("announce"), startId);
+    }
+
+    private void onStop(int startId) {
+        if (run != null && run.ended() == null) {
+            run.end("stopped", nextRevision());
+            broadcast();
+        }
+        clearEvents();
+        // Only stops if no newer start has been requested since.
+        if (stopSelfResult(startId) && wakeLock.isHeld()) wakeLock.release();
+    }
+
+    private void onCommand(JSONObject command, int startId) {
+        if (run == null || command == null) {
+            stopSelfResult(startId);
+            return;
+        }
+        long revision = run.revision();
+        if (run.applyCommand(command, System.currentTimeMillis(), revision + 1)) {
+            saveRevision(run.revision());
+            broadcast();
+            reschedule(null, startId);
+        } else {
+            // Still answer, so the watch knows the phone heard it and shows the current state.
+            WatchLink.publish(this, run.toState());
+            if (run.ended() != null) stopLater(startId, 0);
+        }
+    }
+
+    private void onFinish(int startId) {
+        if (run == null || run.ended() != null) return;
+        run.end("finished", nextRevision());
+        broadcast();
+        // The fanfare and the finish line are still playing: do not clear events here.
+        stopLater(startId, FINISH_GRACE_MS);
+    }
+
+    /** Saves the state and tells the page, the watch and the notification. */
+    private void broadcast() {
+        JSONObject state = run.toState();
+        getSharedPreferences(PREFS, MODE_PRIVATE).edit().putString(PREF_STATE, state.toString()).apply();
+        StateListener current = listener;
+        if (current != null) current.onState(state);
+        WatchLink.publish(this, state);
+        if (run.ended() == null) startInForeground(run.payload().optJSONObject("notification"), run.session().paused());
+    }
+
+    // ---- Scheduling ----
+
+    private void clearEvents() {
+        handler.removeCallbacksAndMessages(eventsToken);
+        if (player != null) player.stopAll();
+    }
+
+    /** Replaces whatever was scheduled with the part of the schedule still ahead. */
+    private void reschedule(JSONObject announce, int startId) {
+        clearEvents();
+        if (run.ended() != null) {
+            stopLater(startId, 0);
+            return;
+        }
+        ensurePlayer();
+        long now = System.currentTimeMillis();
+        long uptime = SystemClock.uptimeMillis();
+        if (run.session().paused()) {
+            if (wakeLock.isHeld()) wakeLock.release();
+            long abandonIn = Math.max(0, run.session().startedAt + RESUME_MAX_AGE_MS - now);
+            handler.postAtTime(() -> stopSelfResult(startId), eventsToken, uptime + abandonIn);
+            return;
+        }
+        long elapsed = run.elapsedMs(now);
+        // Uptime at which the workout (elapsed 0) started.
+        long base = uptime - elapsed;
+        List<Schedule.Event> events = Schedule.ahead(run.schedule(), elapsed);
+
+        // Speech waits for the tone at the same moment: tone first, then voice.
+        Map<Long, Long> toneLength = new HashMap<>();
+        for (Schedule.Event e : events) {
+            if (!e.isTone() || !ToneBank.has(e.tone)) continue;
+            toneLength.put(e.atMs, Math.max(lengthAt(toneLength, e.atMs), ToneBank.durationMs(e.tone)));
+        }
+        if (announce != null && !announce.optString("text").isEmpty()) {
+            String text = announce.optString("text");
+            int volume = announce.optInt("volume");
+            handler.postAtTime(() -> player.speak(text, volume, () -> {}), eventsToken, uptime);
+        }
+        for (Schedule.Event e : events) {
+            if (e.isTone()) {
+                if (!ToneBank.has(e.tone)) continue;
+                handler.postAtTime(() -> player.playTone(e.tone, e.volume), eventsToken, base + e.atMs);
+            } else {
+                long speakAt = e.atMs + lengthAt(toneLength, e.atMs);
+                handler.postAtTime(() -> player.speak(e.text, e.volume, () -> {}), eventsToken, base + speakAt);
+            }
+        }
+        handler.postAtTime(() -> onFinish(startId), eventsToken, base + run.totalMs());
+        wakeLock.acquire(Math.max(0, run.totalMs() - elapsed + FINISH_GRACE_MS));
+    }
+
+    private void ensurePlayer() {
+        List<String> locales = CuePlayer.strings(run.payload().optJSONArray("locales"));
+        if (player == null) player = new CuePlayer(this, handler, locales);
+        else player.setLocales(locales);
+    }
+
+    private void stopLater(int startId, long delayMs) {
+        handler.postAtTime(() -> {
+            if (stopSelfResult(startId) && wakeLock.isHeld()) wakeLock.release();
+        }, eventsToken, SystemClock.uptimeMillis() + delayMs);
+    }
+
+    private static long lengthAt(Map<Long, Long> toneLength, long atMs) {
+        Long length = toneLength.get(atMs);
+        return length == null ? 0 : length;
+    }
+
+    // ---- Revision ----
+
+    private long nextRevision() {
+        long next = getSharedPreferences(PREFS, MODE_PRIVATE).getLong(PREF_REVISION, 0) + 1;
+        saveRevision(next);
+        return next;
+    }
+
+    private void saveRevision(long revision) {
+        getSharedPreferences(PREFS, MODE_PRIVATE).edit().putLong(PREF_REVISION, revision).apply();
+    }
+
+    // ---- Notification ----
+
+    private void startInForeground(JSONObject notification, boolean paused) {
         JSONObject text = notification == null ? new JSONObject() : notification;
         NotificationManager manager = getSystemService(NotificationManager.class);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -118,66 +286,13 @@ public class CoachService extends Service {
         Notification built = new NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(text.optString("title", "PulseRun"))
-            .setContentText(text.optString("text", ""))
+            .setContentText(paused ? text.optString("pausedText", "") : text.optString("text", ""))
             .setContentIntent(content)
             .setOngoing(true)
             .setSilent(true)
             .build();
         int type = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ? ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK : 0;
         ServiceCompat.startForeground(this, NOTIFICATION_ID, built, type);
-    }
-
-    /** Replaces whatever was scheduled with this timeline. Runs on the coach thread. */
-    private void schedule(JSONObject payload, long base, int startId) {
-        handler.removeCallbacksAndMessages(eventsToken);
-        if (player == null) {
-            player = new CuePlayer(this, handler, CuePlayer.strings(payload.optJSONArray("locales")));
-        } else {
-            player.stopAll();
-            player.setLocales(CuePlayer.strings(payload.optJSONArray("locales")));
-        }
-        JSONArray events = payload.optJSONArray("events");
-        if (events == null) events = new JSONArray();
-
-        // Speech waits for the tone at the same moment: tone first, then voice.
-        Map<Long, Long> toneLength = new HashMap<>();
-        for (int i = 0; i < events.length(); i++) {
-            JSONObject event = events.optJSONObject(i);
-            if (event == null || !"tone".equals(event.optString("type"))) continue;
-            String tone = event.optString("tone");
-            if (!ToneBank.has(tone)) continue;
-            long atMs = event.optLong("atMs");
-            toneLength.put(atMs, Math.max(lengthAt(toneLength, atMs), ToneBank.durationMs(tone)));
-        }
-
-        long lastMs = 0;
-        for (int i = 0; i < events.length(); i++) {
-            JSONObject event = events.optJSONObject(i);
-            if (event == null) continue;
-            long atMs = event.optLong("atMs");
-            int volume = event.optInt("volume");
-            if ("tone".equals(event.optString("type"))) {
-                String tone = event.optString("tone");
-                if (!ToneBank.has(tone)) continue;
-                handler.postAtTime(() -> player.playTone(tone, volume), eventsToken, base + atMs);
-                lastMs = Math.max(lastMs, atMs + ToneBank.durationMs(tone));
-            } else if ("speech".equals(event.optString("type"))) {
-                String text = event.optString("text");
-                long speakAt = atMs + lengthAt(toneLength, atMs);
-                handler.postAtTime(() -> player.speak(text, volume, () -> {}), eventsToken, base + speakAt);
-                lastMs = Math.max(lastMs, speakAt);
-            }
-        }
-
-        long endMs = lastMs + FINISH_GRACE_MS;
-        wakeLock.acquire(Math.max(0, base + endMs - SystemClock.uptimeMillis()));
-        // A newer start keeps the service running.
-        handler.postAtTime(() -> stopSelfResult(startId), eventsToken, base + endMs);
-    }
-
-    private static long lengthAt(Map<Long, Long> toneLength, long atMs) {
-        Long length = toneLength.get(atMs);
-        return length == null ? 0 : length;
     }
 
     @Override

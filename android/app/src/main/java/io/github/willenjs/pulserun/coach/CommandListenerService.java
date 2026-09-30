@@ -14,6 +14,13 @@ public class CommandListenerService extends WearableListenerService {
     public void onMessageReceived(MessageEvent event) {
         if (PING_PATH.equals(event.getPath())) {
             Wearable.getMessageClient(this).sendMessage(event.getSourceNodeId(), PONG_PATH, event.getData());
+        } else if (COMMAND_PATH.equals(event.getPath())) {
+            try {
+                CoachService.command(this, new String(event.getData(), java.nio.charset.StandardCharsets.UTF_8));
+            } catch (RuntimeException ignored) {
+                // No run in progress, so the service is not in the foreground and cannot be started
+                // from here. The watch shows "Phone not reachable" when no state comes back.
+            }
         }
     }
 }
