@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -25,6 +26,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,6 +48,7 @@ import io.github.willenjs.pulserun.wear.fillNext
 import io.github.willenjs.pulserun.wear.formatClock
 import io.github.willenjs.pulserun.wear.formatMinutes
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 private const val PREFS = "watch"
 private const val PREF_OVERVIEW = "overview"
@@ -123,6 +126,7 @@ private fun AmbientScreen(state: RunState, now: Long) {
 private fun RunPager(state: RunState, now: Long) {
     val context = LocalContext.current
     val pager = rememberPagerState { 2 }
+    val scope = rememberCoroutineScope()
     var confirmingStop by remember { mutableStateOf(false) }
     val unreachable by RunRepository.unreachable.collectAsState()
     if (confirmingStop) {
@@ -133,7 +137,11 @@ private fun RunPager(state: RunState, now: Long) {
         return
     }
     HorizontalPager(pager, Modifier.fillMaxSize()) { page ->
-        if (page == 0) RunPage(state, now) else ControlsPage(state, onSkip = { RunRepository.send(context, "skip") }, onStop = { confirmingStop = true })
+        if (page == 0) RunPage(state, now) else ControlsPage(state, onSkip = {
+            RunRepository.send(context, "skip")
+            // Back to the countdown so the new phase shows at once.
+            scope.launch { pager.animateScrollToPage(0) }
+        }, onStop = { confirmingStop = true })
     }
     PageDots(pager.currentPage)
     if (unreachable) {
@@ -160,25 +168,30 @@ private fun RunPage(state: RunState, now: Long) {
         },
     ) {
         if (overview) WorkoutRing(state.phases, view.elapsedMs) else PhaseRing(view.phaseProgress, pace)
-        Column(Modifier.fillMaxSize().padding(top = 34.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                (if (view.paused) state.label("paused") else state.label(view.phase.type)).uppercase(),
-                color = if (view.paused) Pulse.muted else pace, fontSize = 13.sp, fontWeight = FontWeight.Bold,
-            )
+        // Equal flexible areas above and below keep the countdown at the exact center of the round screen.
+        Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.BottomCenter) {
+                Text(
+                    (if (view.paused) state.label("paused") else state.label(view.phase.type)).uppercase(),
+                    color = if (view.paused) Pulse.muted else pace, fontSize = 13.sp, fontWeight = FontWeight.Bold,
+                )
+            }
             Text(
                 formatClock(view.phaseRemainingMs),
                 color = if (view.paused) Pulse.muted else Color.White, fontSize = 40.sp, fontWeight = FontWeight.Bold,
             )
-            val subline = when {
-                view.paused -> "${state.label(view.phase.type)} · ${state.label("remainingTotal")} ${formatClock(view.totalRemainingMs)}"
-                overview -> "${state.label("remainingTotal")} ${formatClock(view.totalRemainingMs)}"
-                view.next != null -> fillNext(state.label("next"), state.label(view.next.type), formatClock(view.next.endMs - view.next.startMs))
-                else -> state.label("last")
-            }
-            Text(subline, color = Pulse.muted, fontSize = 11.sp, textAlign = TextAlign.Center, modifier = Modifier.padding(horizontal = 20.dp))
-            Spacer(Modifier.height(6.dp))
-            RoundButton(Pulse.mint, onClick = { RunRepository.send(context, if (view.paused) "resume" else "pause") }) {
-                if (view.paused) PlayIcon(Pulse.onMint) else PauseIcon(Pulse.onMint)
+            Column(Modifier.weight(1f).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                val subline = when {
+                    view.paused -> "${state.label(view.phase.type)} · ${state.label("remainingTotal")} ${formatClock(view.totalRemainingMs)}"
+                    overview -> "${state.label("remainingTotal")} ${formatClock(view.totalRemainingMs)}"
+                    view.next != null -> fillNext(state.label("next"), state.label(view.next.type), formatClock(view.next.endMs - view.next.startMs))
+                    else -> state.label("last")
+                }
+                Text(subline, color = Pulse.muted, fontSize = 11.sp, textAlign = TextAlign.Center, modifier = Modifier.padding(horizontal = 20.dp))
+                Spacer(Modifier.height(14.dp))
+                RoundButton(Pulse.mint, onClick = { RunRepository.send(context, if (view.paused) "resume" else "pause") }) {
+                    if (view.paused) PlayIcon(Pulse.onMint) else PauseIcon(Pulse.onMint)
+                }
             }
         }
     }
