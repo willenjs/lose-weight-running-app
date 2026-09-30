@@ -44,6 +44,7 @@ import io.github.willenjs.pulserun.wear.RunRepository
 import io.github.willenjs.pulserun.wear.RunState
 import io.github.willenjs.pulserun.wear.fillNext
 import io.github.willenjs.pulserun.wear.formatClock
+import io.github.willenjs.pulserun.wear.formatMinutes
 import kotlinx.coroutines.delay
 
 private const val PREFS = "watch"
@@ -113,7 +114,8 @@ private fun AmbientScreen(state: RunState, now: Long) {
             (if (view.paused) state.label("paused") else state.label(view.phase.type)).uppercase(),
             color = Color(0xFFBBBBBB), fontSize = 13.sp,
         )
-        Text(formatClock(view.phaseRemainingMs), color = Color(0xFFBBBBBB), fontSize = 38.sp)
+        // Whole minutes: the system redraws the ambient screen about once a minute.
+        Text(formatMinutes(view.phaseRemainingMs), color = Color(0xFFBBBBBB), fontSize = 38.sp)
     }
 }
 
@@ -197,10 +199,20 @@ private fun StopConfirm(state: RunState, onKeep: () -> Unit, onStop: () -> Unit)
         Text(state.label("stopTitle"), color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
         Text(state.label("stopBody"), color = Pulse.muted, fontSize = 11.sp, textAlign = TextAlign.Center)
         Spacer(Modifier.height(10.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-            RoundButton(Pulse.surface2, onClick = onKeep) { Text("✕", color = Color.White, fontSize = 14.sp) }
-            RoundButton(Pulse.run, onClick = onStop) { Text("✓", color = Color.White, fontSize = 14.sp) }
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.Top) {
+            ChoiceButton(state.label("stopKeep"), Pulse.surface2, onKeep) { Text("✕", color = Color.White, fontSize = 14.sp) }
+            ChoiceButton(state.label("stop"), Pulse.run, onStop) { Text("✓", color = Color.White, fontSize = 14.sp) }
         }
+    }
+}
+
+/** A round button with its label underneath (the stop confirm's Keep going / Stop). */
+@Composable
+private fun ChoiceButton(label: String, color: Color, onClick: () -> Unit, icon: @Composable () -> Unit) {
+    Column(Modifier.width(72.dp).clickable(onClick = onClick), horizontalAlignment = Alignment.CenterHorizontally) {
+        RoundButton(color, onClick = onClick, content = icon)
+        Spacer(Modifier.height(4.dp))
+        Text(label, color = Color.White, fontSize = 10.sp, lineHeight = 12.sp, textAlign = TextAlign.Center, maxLines = 2)
     }
 }
 

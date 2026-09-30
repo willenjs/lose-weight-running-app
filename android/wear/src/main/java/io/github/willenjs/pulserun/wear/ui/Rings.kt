@@ -58,10 +58,12 @@ fun WorkoutRing(phases: List<Phase>, elapsedMs: Long, modifier: Modifier = Modif
     }
 }
 
-/** Thin grey outline for the always-on display. */
+/** Thin grey outline for the always-on display, the phase's progress a lighter grey over it. */
 @Composable
 fun AmbientRing(progress: Float, modifier: Modifier = Modifier) {
     Canvas(modifier.fillMaxSize()) {
-        ring(Color(0xFF555555), -90f, 360f * progress, 3.dp.toPx())
+        val width = 2.dp.toPx()
+        ring(Color(0xFF444444), -90f, 360f, width)
+        if (progress > 0f) ring(Color(0xFF888888), -90f, 360f * progress, width)
     }
 }

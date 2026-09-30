@@ -142,4 +142,13 @@ class RunStateTest {
         assertNull(state.staleAt())
         assertFalse(state.isStale(t0 + 10 * RESUME_MAX_AGE_MS))
     }
+
+    @Test
+    fun formatsWholeMinutesRoundedUp() {
+        assertEquals("6'", formatMinutes(360_000L))
+        assertEquals("6'", formatMinutes(300_001L))
+        assertEquals("1'", formatMinutes(1L))
+        assertEquals("0'", formatMinutes(0L))
+        assertEquals("0'", formatMinutes(-5L))
+    }
 }

@@ -140,6 +140,12 @@ fun formatClock(ms: Long): String {
     return "%02d:%02d".format(totalSec / 60, totalSec % 60)
 }
 
+/**
+ * Whole minutes left, rounded up like formatClock, with the minute mark: "5'".
+ * For the ambient screen, redrawn only about once a minute. Needs no label.
+ */
+fun formatMinutes(ms: Long): String = "${ceil(ms.coerceAtLeast(0) / 60_000.0).toLong()}'"
+
 /** Fills the phone's `run.next` text, e.g. "Next: {phase} {time}". */
 fun fillNext(template: String, phase: String, time: String): String =
     template.replace("{phase}", phase).replace("{time}", time)
