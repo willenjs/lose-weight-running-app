@@ -67,6 +67,16 @@ describe('buildTimeline', () => {
     ]);
   });
 
+  it('keeps the phase tone when built a few ms after a start or skip', () => {
+    expect(buildTimeline(fresh(), w, T0 + 9, settings(), announce).slice(0, 2)).toEqual([
+      { kind: 'tone', tone: 'walk', inMs: 0 },
+      { kind: 'speech', inMs: 0, phaseType: 'walk', seconds: 360, extraKeys: [] },
+    ]);
+    const skipped = skipPhase(fresh(), w, T0 + s(30));
+    expect(buildTimeline(skipped, w, T0 + s(30) + 15, settings(), announce)[0])
+      .toEqual({ kind: 'tone', tone: 'jog', inMs: 0 });
+  });
+
   it('has no speech when the voice is off', () => {
     const events = buildTimeline(fresh(), w, T0, settings({ voiceVolume: 0 }), announce);
     expect(speech(events)).toEqual([]);

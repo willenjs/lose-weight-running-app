@@ -4,6 +4,9 @@ import { getState, phaseBoundaries } from './timer.js';
 /** @typedef {{ kind: CueKind, inMs: number }} Cue */
 
 export const COUNTDOWN_PIPS = 3;
+// A cue at most this far in the past still plays, right away: cues are
+// scheduled a few ms after the start or skip that made them due.
+export const DUE_GRACE_MS = 250;
 
 /**
  * Every audio cue still ahead in the workout, as delays from `now`.
@@ -30,9 +33,9 @@ export function upcomingCues(session, workout, now) {
   cues.push({ kind: 'finish', atMs: bounds.at(-1).endMs });
 
   return cues
-    .filter((cue) => cue.atMs >= elapsed)
+    .filter((cue) => cue.atMs >= elapsed - DUE_GRACE_MS)
     .sort((a, b) => a.atMs - b.atMs)
-    .map((cue) => ({ kind: cue.kind, inMs: cue.atMs - elapsed }));
+    .map((cue) => ({ kind: cue.kind, inMs: Math.max(0, cue.atMs - elapsed) }));
 }
 
 /**

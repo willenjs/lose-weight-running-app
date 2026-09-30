@@ -33,6 +33,12 @@ describe('upcomingCues', () => {
     expect(cues[0]).toEqual({ kind: 'jog', inMs: 500 });
   });
 
+  it('still plays a cue that fell due a moment ago', () => {
+    // Cues are scheduled a few ms after the start or skip that made them due.
+    expect(upcomingCues(fresh(), w, T0 + 9)[0]).toEqual({ kind: 'walk', inMs: 0 });
+    expect(upcomingCues(fresh(), w, T0 + 9)[1]).toEqual({ kind: 'pip', inMs: s(357) - 9 });
+  });
+
   it('schedules nothing while paused', () => {
     expect(upcomingCues(pauseSession(fresh(), T0 + s(10)), w, T0 + s(20))).toEqual([]);
   });
