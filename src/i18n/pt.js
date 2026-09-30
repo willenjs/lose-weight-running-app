@@ -1,5 +1,6 @@
 export default {
   'app.title': 'PulseRun',
+  'splash.tagline': 'Caminhar · Trotar · Correr',
   'app.subtitle': 'Plano 5 Semanas',
   'lang.label': 'Idioma',
   'header.home': 'Início',

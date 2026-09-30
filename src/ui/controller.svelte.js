@@ -17,6 +17,7 @@ import { coachExtras } from '../core/coach.js';
 import { backAction } from '../core/navigation.js';
 import { createBackButton } from '../platform/backButton.js';
 import { phaseLine, speechText } from '../i18n/cueText.js';
+import { finishSplash } from '../platform/splash.js';
 
 export { VOICE_STYLES } from '../core/audioSettings.js';
 
@@ -106,6 +107,11 @@ export function init() {
     // The Android service may have moved on (watch commands) or ended the run.
     engine.checkRunState(saved);
   } else storage.clearSession();
+}
+
+/** Called once the app has mounted: hands over from the splash. */
+export function appReady() {
+  finishSplash({ tagline: t('splash.tagline') });
 }
 
 export function t(key, params) {

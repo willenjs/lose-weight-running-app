@@ -9,6 +9,7 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.wear.ambient.AmbientLifecycleObserver
 import io.github.willenjs.pulserun.wear.ui.PulseApp
+import io.github.willenjs.pulserun.wear.ui.SplashScreen
 
 class MainActivity : ComponentActivity() {
     private val ambient = mutableStateOf(false)
@@ -27,8 +28,14 @@ class MainActivity : ComponentActivity() {
         if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 0)
         }
+        // Splash only on a fresh launch, never over a recreated or ambient screen.
+        val splash = mutableStateOf(savedInstanceState == null)
         setContent {
-            PulseApp(ambient = ambient.value, ambientTick = ambientTick.longValue, onFinished = { finish() })
+            if (splash.value && !ambient.value) {
+                SplashScreen(onDone = { splash.value = false })
+            } else {
+                PulseApp(ambient = ambient.value, ambientTick = ambientTick.longValue, onFinished = { finish() })
+            }
         }
     }
 

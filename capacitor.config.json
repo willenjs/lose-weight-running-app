@@ -1,5 +1,11 @@
 {
   "appId": "io.github.willenjs.pulserun",
   "appName": "PulseRun",
-  "webDir": "dist"
+  "webDir": "dist",
+  "backgroundColor": "#0c0d12",
+  "plugins": {
+    "SystemBars": {
+      "initialViewportFitValueHint": "cover"
+    }
+  }
 }
