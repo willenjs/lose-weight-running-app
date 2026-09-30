@@ -8,12 +8,20 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "android:sync": "vite build && cap sync android",
+    "android:build": "node scripts/android-build.mjs",
+    "android:install": "node scripts/android-build.mjs --install"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.5.2",
     "@sveltejs/vite-plugin-svelte": "^7.3.1",
     "svelte": "^5.57.1",
     "vite": "^8.3.1",
     "vitest": "^5.0.2"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/core": "^8.5.2"
   }
 }
