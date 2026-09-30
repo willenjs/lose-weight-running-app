@@ -60,6 +60,8 @@ public class CoachService extends Service {
     private CuePlayer player;
     private PowerManager.WakeLock wakeLock;
     private RunModel run;
+    // Start id of the last intent the coach thread has processed; state-driven stops use it, so a start still queued blocks them.
+    private int lastHandledStartId;
 
     static void start(Context context, String payload) {
         Intent intent = new Intent(context, CoachService.class).setAction(ACTION_START).putExtra(EXTRA_PAYLOAD, payload);
@@ -135,6 +137,7 @@ public class CoachService extends Service {
     // ---- Changes (all on the coach thread) ----
 
     private void onPayload(JSONObject payload, int startId) {
+        lastHandledStartId = startId;
         try {
             run = RunModel.fromPayload(payload, nextRevision());
         } catch (JSONException e) {
@@ -142,10 +145,11 @@ public class CoachService extends Service {
             return;
         }
         broadcast();
-        reschedule(payload.optJSONObject("announce"), startId);
+        reschedule(payload.optJSONObject("announce"));
     }
 
     private void onStop(int startId) {
+        lastHandledStartId = startId;
         if (run != null && run.ended() == null) {
             run.end("stopped", nextRevision());
             broadcast();
@@ -156,28 +160,34 @@ public class CoachService extends Service {
     }
 
     private void onCommand(JSONObject command, int startId) {
-        if (run == null || command == null) {
+        lastHandledStartId = startId;
+        if (run == null) {
             stopSelfResult(startId);
+            return;
+        }
+        if (command == null) {
+            // Malformed message: answer with the current state, keep the run going.
+            WatchLink.publish(this, run.toState());
             return;
         }
         long revision = run.revision();
         if (run.applyCommand(command, System.currentTimeMillis(), revision + 1)) {
             saveRevision(run.revision());
             broadcast();
-            reschedule(null, startId);
+            reschedule(null);
         } else {
             // Still answer, so the watch knows the phone heard it and shows the current state.
             WatchLink.publish(this, run.toState());
-            if (run.ended() != null) stopLater(startId, 0);
+            stopIfStopped();
         }
     }
 
-    private void onFinish(int startId) {
+    private void onFinish() {
         if (run == null || run.ended() != null) return;
         run.end("finished", nextRevision());
         broadcast();
         // The fanfare and the finish line are still playing: do not clear events here.
-        stopLater(startId, FINISH_GRACE_MS);
+        stopLater(FINISH_GRACE_MS);
     }
 
     /** Saves the state and tells the page, the watch and the notification. */
@@ -198,10 +208,10 @@ public class CoachService extends Service {
     }
 
     /** Replaces whatever was scheduled with the part of the schedule still ahead. */
-    private void reschedule(JSONObject announce, int startId) {
+    private void reschedule(JSONObject announce) {
         clearEvents();
         if (run.ended() != null) {
-            stopLater(startId, 0);
+            stopIfStopped();
             return;
         }
         ensurePlayer();
@@ -210,7 +220,7 @@ public class CoachService extends Service {
         if (run.session().paused()) {
             if (wakeLock.isHeld()) wakeLock.release();
             long abandonIn = Math.max(0, run.session().startedAt + RESUME_MAX_AGE_MS - now);
-            handler.postAtTime(() -> stopSelfResult(startId), eventsToken, uptime + abandonIn);
+            handler.postAtTime(() -> stopNow(), eventsToken, uptime + abandonIn);
             return;
         }
         long elapsed = run.elapsedMs(now);
@@ -238,7 +248,7 @@ public class CoachService extends Service {
                 handler.postAtTime(() -> player.speak(e.text, e.volume, () -> {}), eventsToken, base + speakAt);
             }
         }
-        handler.postAtTime(() -> onFinish(startId), eventsToken, base + run.totalMs());
+        handler.postAtTime(this::onFinish, eventsToken, base + run.totalMs());
         wakeLock.acquire(Math.max(0, run.totalMs() - elapsed + FINISH_GRACE_MS));
     }
 
@@ -248,10 +258,17 @@ public class CoachService extends Service {
         else player.setLocales(locales);
     }
 
-    private void stopLater(int startId, long delayMs) {
-        handler.postAtTime(() -> {
-            if (stopSelfResult(startId) && wakeLock.isHeld()) wakeLock.release();
-        }, eventsToken, SystemClock.uptimeMillis() + delayMs);
+    private void stopLater(long delayMs) {
+        handler.postAtTime(this::stopNow, eventsToken, SystemClock.uptimeMillis() + delayMs);
+    }
+
+    /** A run that finished is stopped by its pending grace timer, so the fanfare plays out. */
+    private void stopIfStopped() {
+        if (run.ended() != null && !"finished".equals(run.ended())) stopLater(0);
+    }
+
+    private void stopNow() {
+        if (stopSelfResult(lastHandledStartId) && wakeLock.isHeld()) wakeLock.release();
     }
 
     private static long lengthAt(Map<Long, Long> toneLength, long atMs) {
