@@ -5,7 +5,7 @@ import {
 import { markDone, unmark, programStats } from '../core/progress.js';
 import { translate, LANGS, DEFAULT_LANG, LOCALES, VOICE_LOCALES } from '../i18n/index.js';
 import { createStorage } from '../platform/storage.js';
-import { createCuePlayer } from '../platform/audio.js';
+import { createWebCueEngine } from '../platform/webCueEngine.js';
 import { speak, cancelSpeech } from '../platform/speech.js';
 import { createWakeLock } from '../platform/wakeLock.js';
 import { share, canShare } from '../platform/share.js';
@@ -27,7 +27,6 @@ const TOAST_MS = 2000;
 const TEST_PHASE_SECONDS = 5 * 60;
 
 const storage = createStorage();
-const cuePlayer = createCuePlayer();
 const wakeLock = createWakeLock();
 
 export const app = $state({
@@ -51,14 +50,14 @@ export const app = $state({
   toast: null,
   canShare: canShare(),
 });
+/** @type {import('../platform/webCueEngine.js').CueEngine} */
+let engine = createWebCueEngine({ locales: () => VOICE_LOCALES[app.lang] });
+
 
 let ticker = null;
 let finishTimer = null;
 let lastPhaseIndex = -1;
 let toastTimer = null;
-let testTimer = null;
-// Bumped on each audio test so callbacks from an earlier test are ignored.
-let testRun = 0;
 
 export function init() {
   const savedLang = storage.loadLang();
@@ -128,7 +127,7 @@ export function discardResume() {
 }
 
 export function pause() {
-  cuePlayer.stop();
+  engine.stop();
   setSession(pauseSession(app.session, Date.now()));
 }
 
@@ -138,9 +137,9 @@ export function resume() {
 }
 
 export function skip() {
-  cuePlayer.stop();
+  engine.stop();
   setSession(skipPhase(app.session, currentWorkout(), Date.now()));
-  if (app.session.pausedAt === null) playCues();
+  if (app.session.pausedAt === null) playCues(true);
   tick();
 }
 
@@ -153,7 +152,7 @@ export function cancelStop() {
 }
 
 export function stop() {
-  cuePlayer.stop();
+  engine.stop();
   endRun();
   app.screen = 'workout';
 }
@@ -173,7 +172,7 @@ export function setAudio(patch) {
   if (!canSpeak()) cancelSpeech();
   // Re-schedule so the change applies now.
   if (app.session) {
-    cuePlayer.stop();
+    engine.stop();
     if (app.session.pausedAt === null) playCues();
   }
 }
@@ -188,20 +187,11 @@ export function previewAudio(patch) {
  * announcement, then the beeps, then the fanfare. Called from a tap.
  */
 export function testAudio() {
-  const run = ++testRun;
-  clearTimeout(testTimer);
   const settings = $state.snapshot(app.settings);
-  const { speak: withVoice, voiceExtras, tones } = testSequence(settings);
-  const playTones = () => {
-    if (run !== testRun) return;
-    const ms = cuePlayer.test(tones, settings);
-    testTimer = setTimeout(() => { if (run === testRun) app.audioTesting = false; }, ms);
-  };
-
+  const { speak: withVoice, voiceExtras } = testSequence(settings);
+  const sample = withVoice ? phaseLine(app.lang, 'run', TEST_PHASE_SECONDS, voiceExtras) : null;
   app.audioTesting = true;
-  // Unlock audio within the tap, even when the voice goes first.
-  cuePlayer.test([], settings);
-  if (!withVoice || !say(phaseLine(app.lang, 'run', TEST_PHASE_SECONDS, voiceExtras), { onEnd: playTones })) playTones();
+  engine.test(settings, sample, () => { app.audioTesting = false; });
 }
 
 export function audioMuted() {
@@ -271,14 +261,15 @@ function beginRun(session) {
   app.screen = 'run';
   lastPhaseIndex = -1;
   setSession(session);
-  if (session.pausedAt === null) playCues();
+  if (session.pausedAt === null) playCues(true);
   wakeLock.acquire();
   startTicking();
 }
 
-function playCues() {
-  app.audioAvailable = cuePlayer.start(
+function playCues(announceCurrent = false) {
+  app.audioAvailable = engine.start(
     $state.snapshot(app.session), currentWorkout(), Date.now(), $state.snapshot(app.settings),
+    { announceCurrent },
   );
 }
 
@@ -340,7 +331,7 @@ function finish(workout) {
   endRun();
   app.screen = 'finished';
   say(t('cue.finish'));
-  finishTimer = setTimeout(() => cuePlayer.stop(), FINISH_AUDIO_GRACE_MS);
+  finishTimer = setTimeout(() => engine.stop(), FINISH_AUDIO_GRACE_MS);
 }
 
 function endRun() {
