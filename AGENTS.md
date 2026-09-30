@@ -10,9 +10,11 @@ for what the app is; this file is about how to change it safely.
 - Build: `npm run build`
 - Dev server: `npm run dev`
 - Android APK: `npm run android:build` (install over USB: `npm run android:install`)
+- Phone + watch JVM unit tests: `npm run android:test`
+- Watch APK: `npm run wear:build` (install over Wi-Fi: set `WEAR_SERIAL=<ip:port>`, then `npm run wear:install`)
 
 Before claiming a change is done, run `npm test` and `npm run build` and
-confirm both pass.
+confirm both pass. If `android/` changed, also run `npm run android:test`.
 
 ## Architecture rules
 
@@ -26,6 +28,13 @@ confirm both pass.
 - `src/platform/native/` talks to the Android `Coach` plugin. In the app the
   native engine speaks every cue itself (`speaksInBackground`), so the
   controller must not speak or hold the screen wake lock there.
+- `android/wear/` is the Wear OS companion, in Kotlin + Compose for Wear OS
+  (Wear OS has no WebView). The phone app's native code stays Java.
+- While a run is active in the Android app, `CoachService` owns the session:
+  JS sends every session change (`engine.sync`), the service applies watch
+  commands itself and reports states back (`stateChanged`, `current()`).
+  `tests/fixtures/session-math.json` pins `timer.js`, `SessionMath.java` and
+  the watch's `RunState.kt` to the same arithmetic; change all three together.
 - Svelte 5 runes only (`$state`, `$derived`, `$props`, `onclick=`); no
   legacy `export let`, `$:` or `on:click`.
 - No router, no TypeScript, no SvelteKit, no i18n library, no backend.
