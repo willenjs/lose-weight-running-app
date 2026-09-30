@@ -167,7 +167,8 @@ private fun RunPage(state: RunState, now: Long) {
         },
     ) {
         if (overview) WorkoutRing(state.phases, view.elapsedMs) else PhaseRing(view.phaseProgress, pace)
-        Column(Modifier.fillMaxSize().padding(top = 34.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        // Centered on the round screen; the bottom padding keeps the button clear of the page dots.
+        Column(Modifier.fillMaxSize().padding(bottom = 16.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 (if (view.paused) state.label("paused") else state.label(view.phase.type)).uppercase(),
                 color = if (view.paused) Pulse.muted else pace, fontSize = 13.sp, fontWeight = FontWeight.Bold,
@@ -183,7 +184,7 @@ private fun RunPage(state: RunState, now: Long) {
                 else -> state.label("last")
             }
             Text(subline, color = Pulse.muted, fontSize = 11.sp, textAlign = TextAlign.Center, modifier = Modifier.padding(horizontal = 20.dp))
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(14.dp))
             RoundButton(Pulse.mint, onClick = { RunRepository.send(context, if (view.paused) "resume" else "pause") }) {
                 if (view.paused) PlayIcon(Pulse.onMint) else PauseIcon(Pulse.onMint)
             }
