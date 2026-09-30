@@ -1,5 +1,6 @@
 import { runPayload, nativeTest } from './payload.js';
-import { reconcile } from './runState.js';
+import { getState } from '../../core/timer.js';
+import { reconcile, confirmFinish } from './runState.js';
 
 // A start delayed longer than this (the permission prompt) announces where the runner is.
 const STALE_START_MS = 1000;
@@ -37,6 +38,8 @@ export function createNativeCueEngine({ plugin, locales, speechText, notificatio
   let tracked = null;
   /** @type {(decision: import('./runState.js').RunDecision) => void} */
   let listener = () => {};
+  /** The run whose finish is being confirmed with the service. @type {number | null} */
+  let confirming = null;
 
   const track = (session) => {
     if (tracked?.runId !== session.startedAt) tracked = { runId: session.startedAt, revision: -1 };
@@ -76,6 +79,7 @@ export function createNativeCueEngine({ plugin, locales, speechText, notificatio
     stop() {
       generation++;
       tracked = null;
+      confirming = null;
       plugin.stop({ reason: 'stopped' }).catch(() => {});
     },
     onRunState(callback) {
@@ -85,6 +89,24 @@ export function createNativeCueEngine({ plugin, locales, speechText, notificatio
     checkRunState(session) {
       track(session);
       plugin.current().then(({ state }) => deliver(state)).catch(() => {});
+    },
+    confirmFinish(session, workout) {
+      const runId = session.startedAt;
+      // Asked on every tick while the answer is pending: ask the service once.
+      if (confirming === runId) return;
+      confirming = runId;
+      track(session);
+      const decide = (state) => {
+        // Stopped, or another run started, while waiting.
+        if (confirming !== runId || tracked?.runId !== runId) return;
+        confirming = null;
+        const decision = confirmFinish(session, tracked.revision, state, (s) => getState(s, workout, clock()).finished);
+        if (decision.type === 'adopt') {
+          tracked = { runId, revision: Math.max(tracked.revision, state.revision) };
+        } else tracked = null;
+        listener(decision);
+      };
+      plugin.current().then(({ state }) => decide(state), () => decide(null));
     },
     test(settings, sampleText, onDone) {
       const run = ++testRun;

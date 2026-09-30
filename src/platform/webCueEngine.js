@@ -13,12 +13,15 @@ import { testSequence } from '../core/audioSettings.js';
  *     onDone: () => void): void,
  *   onRunState(listener: (decision: import('./native/runState.js').RunDecision) => void): void,
  *   checkRunState(session: import('../core/timer.js').Session): void,
+ *   confirmFinish(session: import('../core/timer.js').Session, workout: import('../core/plan.js').Workout): void,
  * }} CueEngine
  * Plays a workout's cues. `sync` is called after every session change (start,
  * pause, resume, skip, settings, language) and returns whether audio is
  * available. `speaksInBackground` engines speak the phase lines themselves;
  * otherwise the controller speaks them while visible. Only the Android
- * engine reports run states (changes made from the watch).
+ * engine reports run states (changes made from the watch); its
+ * `confirmFinish` asks the service whether a run the local clock sees as
+ * over really is, and reports the answer as a run state.
  */
 
 /**
@@ -46,6 +49,7 @@ export function createWebCueEngine({ locales }) {
     },
     onRunState() {},
     checkRunState() {},
+    confirmFinish() {},
     test(settings, sampleText, onDone) {
       const run = ++testRun;
       clearTimeout(testTimer);

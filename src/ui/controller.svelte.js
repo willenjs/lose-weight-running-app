@@ -324,11 +324,15 @@ function stopTicking() {
 // display stays correct, so returning must re-sync audio to the timer.
 function onVisibilityChange() {
   if (document.visibilityState !== 'visible') return;
+  if (engine.speaksInBackground) {
+    // Android: catch up with changes made from the watch while the page slept,
+    // before the stale local session can tick into a finish.
+    if (app.session) engine.checkRunState($state.snapshot(app.session));
+    tick();
+    return;
+  }
   tick();
-  if (!app.session) return;
-  // Android: catch up with changes made from the watch while the page slept.
-  if (engine.speaksInBackground) engine.checkRunState($state.snapshot(app.session));
-  else if (app.session.pausedAt === null) syncCues();
+  if (app.session && app.session.pausedAt === null) syncCues();
 }
 
 /**
@@ -341,10 +345,13 @@ function applyRunState(decision) {
     if (decision.type === 'stopped') {
       endRun();
       app.screen = 'workout';
-      return;
+    } else if (decision.type === 'finished') {
+      // Confirmed by the service: finish directly (tick would ask it again).
+      finish(currentWorkout());
+    } else {
+      setSession(decision.session);
+      tick();
     }
-    setSession(decision.session);
-    tick();
     return;
   }
   if (!app.pendingResume) return;
@@ -367,7 +374,10 @@ function tick() {
   app.now = Date.now();
   const state = getState(app.session, workout, app.now);
   if (state.finished) {
-    finish(workout);
+    // Android: the watch may have paused the run while the page slept, so
+    // the service confirms the finish (answer through applyRunState).
+    if (engine.speaksInBackground) engine.confirmFinish($state.snapshot(app.session), workout);
+    else finish(workout);
     return;
   }
   if (!state.paused && state.phaseIndex !== lastPhaseIndex) {

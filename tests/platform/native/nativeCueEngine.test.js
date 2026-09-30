@@ -140,6 +140,97 @@ describe('createNativeCueEngine', () => {
     expect(listener).toHaveBeenCalledWith({ type: 'stopped' });
   });
 
+  describe('confirmFinish', () => {
+    // w1d1 lasts 30 minutes: by T0 + 40 min the running session is over locally.
+    const LATE = T0 + 40 * 60_000;
+
+    function confirmWith(state, { clockAt = LATE, reject = false } = {}) {
+      const plugin = fakePlugin();
+      plugin.current = vi.fn(() => (reject ? Promise.reject(new Error('gone')) : Promise.resolve({ state })));
+      const engine = engineWith(plugin, vi.fn(), () => clockAt);
+      const listener = vi.fn();
+      engine.onRunState(listener);
+      return { plugin, engine, listener };
+    }
+
+    it('adopts the session the watch paused instead of finishing', async () => {
+      const paused = pauseSession(running, T0 + 60_000);
+      const { engine, listener } = confirmWith({ runId: T0, revision: 4, ended: null, session: paused });
+      engine.confirmFinish(running, w);
+      await flush();
+      expect(listener).toHaveBeenCalledWith({ type: 'adopt', session: paused });
+    });
+
+    it('finishes with the local session when the service has no state for the run', async () => {
+      const { engine, listener } = confirmWith({ runId: 42, revision: 4, ended: null, session: running });
+      engine.confirmFinish(running, w);
+      await flush();
+      expect(listener).toHaveBeenCalledWith({ type: 'finished', session: running });
+    });
+
+    it('finishes with the local session when the service cannot be asked', async () => {
+      const { engine, listener } = confirmWith(null, { reject: true });
+      engine.confirmFinish(running, w);
+      await flush();
+      expect(listener).toHaveBeenCalledWith({ type: 'finished', session: running });
+    });
+
+    it('finishes when the service still runs a session that is over by the clock', async () => {
+      const { engine, listener } = confirmWith({ runId: T0, revision: 4, ended: null, session: running });
+      engine.confirmFinish(running, w);
+      await flush();
+      expect(listener).toHaveBeenCalledWith({ type: 'finished', session: running });
+    });
+
+    it('ends the run the service stopped', async () => {
+      const { engine, listener } = confirmWith({ runId: T0, revision: 4, ended: 'stopped', session: running });
+      engine.confirmFinish(running, w);
+      await flush();
+      expect(listener).toHaveBeenCalledWith({ type: 'stopped' });
+    });
+
+    it('asks the service once while an answer is pending', async () => {
+      const { plugin, engine, listener } = confirmWith({ runId: T0, revision: 4, ended: 'finished', session: running });
+      engine.confirmFinish(running, w);
+      engine.confirmFinish(running, w);
+      engine.confirmFinish(running, w);
+      await flush();
+      expect(plugin.current).toHaveBeenCalledTimes(1);
+      expect(listener).toHaveBeenCalledTimes(1);
+      engine.confirmFinish(running, w);
+      expect(plugin.current).toHaveBeenCalledTimes(2);
+    });
+
+    it('finishes after a local skip to the end the service has not received yet', async () => {
+      const state = { runId: T0, revision: 4, ended: null, session: pauseSession(running, T0 + 60_000) };
+      const { plugin, engine, listener } = confirmWith(state);
+      engine.sync(running, w, T0, DEFAULT_AUDIO_SETTINGS, syncOpts);
+      plugin.emit('stateChanged', state); // the echo of the app's last change
+      listener.mockClear();
+      engine.confirmFinish(running, w);
+      await flush();
+      expect(listener).toHaveBeenCalledWith({ type: 'finished', session: running });
+    });
+
+    it('drops the answer after a stop', async () => {
+      const { engine, listener } = confirmWith({ runId: T0, revision: 4, ended: 'finished', session: running });
+      engine.confirmFinish(running, w);
+      engine.stop();
+      await flush();
+      expect(listener).not.toHaveBeenCalled();
+    });
+
+    it('does not re-deliver the adopted revision as a state change', async () => {
+      const paused = pauseSession(running, T0 + 60_000);
+      const state = { runId: T0, revision: 4, ended: null, session: paused };
+      const { plugin, engine, listener } = confirmWith(state);
+      engine.confirmFinish(running, w);
+      await flush();
+      plugin.emit('stateChanged', state);
+      expect(listener).toHaveBeenCalledTimes(1);
+    });
+  });
+
   it('only finishes the latest audio test', async () => {
     const plugin = fakePlugin();
     const resolvers = [];
