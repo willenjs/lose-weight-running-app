@@ -220,6 +220,51 @@ describe('createNativeCueEngine', () => {
       expect(listener).not.toHaveBeenCalled();
     });
 
+    it('does not finish a stale session after the foreground check adopted the watch pause', async () => {
+      // Back in the foreground: checkRunState and the stale session's tick ask at once.
+      const paused = pauseSession(running, T0 + 60_000);
+      const state = { runId: T0, revision: 5, ended: null, session: paused };
+      const { plugin, engine, listener } = confirmWith(state);
+      engine.sync(running, w, T0, DEFAULT_AUDIO_SETTINGS, syncOpts);
+      plugin.emit('stateChanged', { runId: T0, revision: 4, ended: null, session: running });
+      listener.mockClear();
+      engine.checkRunState(running);
+      engine.confirmFinish(running, w);
+      await flush();
+      expect(listener).toHaveBeenCalledTimes(1);
+      expect(listener).toHaveBeenCalledWith({ type: 'adopt', session: paused });
+      expect(listener).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'finished' }));
+    });
+
+    it('drops the answer when a newer state arrives while the finish is being confirmed', async () => {
+      const paused = pauseSession(running, T0 + 60_000);
+      const state = { runId: T0, revision: 5, ended: null, session: paused };
+      const { plugin, engine, listener } = confirmWith(state);
+      let answer;
+      plugin.current = vi.fn(() => new Promise((resolve) => { answer = resolve; }));
+      engine.sync(running, w, T0, DEFAULT_AUDIO_SETTINGS, syncOpts);
+      engine.confirmFinish(running, w);
+      plugin.emit('stateChanged', state);
+      answer({ state });
+      await flush();
+      expect(listener).toHaveBeenCalledTimes(1);
+      expect(listener).toHaveBeenCalledWith({ type: 'adopt', session: paused });
+      // Not stuck: a later tick asks again.
+      engine.confirmFinish(paused, w);
+      expect(plugin.current).toHaveBeenCalledTimes(2);
+    });
+
+    it('still finishes when the service reports the finish during the race', async () => {
+      const finished = { runId: T0, revision: 5, ended: 'finished', session: running };
+      const { plugin, engine, listener } = confirmWith(finished);
+      engine.sync(running, w, T0, DEFAULT_AUDIO_SETTINGS, syncOpts);
+      engine.checkRunState(running);
+      engine.confirmFinish(running, w);
+      await flush();
+      expect(listener).toHaveBeenCalledTimes(1);
+      expect(listener).toHaveBeenCalledWith({ type: 'finished', session: running });
+    });
+
     it('does not re-deliver the adopted revision as a state change', async () => {
       const paused = pauseSession(running, T0 + 60_000);
       const state = { runId: T0, revision: 4, ended: null, session: paused };

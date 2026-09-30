@@ -34,11 +34,12 @@ export function createNativeCueEngine({ plugin, locales, speechText, notificatio
   // permission prompt does not revive a run after a later stop.
   let generation = 0;
   let testRun = 0;
+  // Always replaced, never mutated: a pending confirmation compares it by identity.
   /** The run the app shows and the newest revision seen for it. @type {{ runId: number, revision: number } | null} */
   let tracked = null;
   /** @type {(decision: import('./runState.js').RunDecision) => void} */
   let listener = () => {};
-  /** The run whose finish is being confirmed with the service. @type {number | null} */
+  /** The pending finish confirmation: its run and the tracked state it was asked with. @type {{ runId: number, seen: { runId: number, revision: number } } | null} */
   let confirming = null;
 
   const track = (session) => {
@@ -93,16 +94,22 @@ export function createNativeCueEngine({ plugin, locales, speechText, notificatio
     confirmFinish(session, workout) {
       const runId = session.startedAt;
       // Asked on every tick while the answer is pending: ask the service once.
-      if (confirming === runId) return;
-      confirming = runId;
+      if (confirming?.runId === runId) return;
       track(session);
+      // Judge the answer against what the app knew when it asked.
+      const ask = { runId, seen: tracked };
+      confirming = ask;
       const decide = (state) => {
-        // Stopped, or another run started, while waiting.
-        if (confirming !== runId || tracked?.runId !== runId) return;
+        // Stopped, or another confirmation replaced this one, while waiting.
+        if (confirming !== ask) return;
         confirming = null;
-        const decision = confirmFinish(session, tracked.revision, state, (s) => getState(s, workout, clock()).finished);
+        // A newer state was adopted (or the run ended) while waiting: the
+        // local session asked about is stale, so drop the answer. The next
+        // tick asks again if the session the app now shows is over.
+        if (tracked !== ask.seen) return;
+        const decision = confirmFinish(session, ask.seen.revision, state, (s) => getState(s, workout, clock()).finished);
         if (decision.type === 'adopt') {
-          tracked = { runId, revision: Math.max(tracked.revision, state.revision) };
+          tracked = { runId, revision: Math.max(ask.seen.revision, state.revision) };
         } else tracked = null;
         listener(decision);
       };

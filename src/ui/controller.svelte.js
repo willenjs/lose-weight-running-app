@@ -347,6 +347,7 @@ function applyRunState(decision) {
       app.screen = 'workout';
     } else if (decision.type === 'finished') {
       // Confirmed by the service: finish directly (tick would ask it again).
+      setSession(decision.session);
       finish(currentWorkout());
     } else {
       setSession(decision.session);
