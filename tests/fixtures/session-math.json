@@ -1,0 +1,53 @@
+{
+  "workoutId": "w1d1",
+  "phases": [
+    { "type": "walk", "startMs": 0, "endMs": 360000 },
+    { "type": "jog", "startMs": 360000, "endMs": 480000 },
+    { "type": "walk", "startMs": 480000, "endMs": 840000 },
+    { "type": "jog", "startMs": 840000, "endMs": 960000 },
+    { "type": "run", "startMs": 960000, "endMs": 1260000 }
+  ],
+  "elapsed": [
+    { "name": "fresh start", "session": { "startedAt": 1000000, "pausedAt": null, "pausedTotalMs": 0, "skippedMs": 0 }, "now": 1000000, "elapsedMs": 0 },
+    { "name": "running 100 s", "session": { "startedAt": 1000000, "pausedAt": null, "pausedTotalMs": 0, "skippedMs": 0 }, "now": 1100000, "elapsedMs": 100000 },
+    { "name": "paused at 50 s", "session": { "startedAt": 1000000, "pausedAt": 1050000, "pausedTotalMs": 0, "skippedMs": 0 }, "now": 1999000, "elapsedMs": 50000 },
+    { "name": "after a 20 s pause", "session": { "startedAt": 1000000, "pausedAt": null, "pausedTotalMs": 20000, "skippedMs": 0 }, "now": 1100000, "elapsedMs": 80000 },
+    { "name": "with a skip", "session": { "startedAt": 1000000, "pausedAt": null, "pausedTotalMs": 0, "skippedMs": 300000 }, "now": 1060000, "elapsedMs": 360000 },
+    { "name": "clock before the start", "session": { "startedAt": 1000000, "pausedAt": null, "pausedTotalMs": 0, "skippedMs": 0 }, "now": 995000, "elapsedMs": 0 },
+    { "name": "past the end", "session": { "startedAt": 1000000, "pausedAt": null, "pausedTotalMs": 0, "skippedMs": 0 }, "now": 3000000, "elapsedMs": 1260000 }
+  ],
+  "actions": [
+    { "name": "pause while running", "action": "pause", "now": 1010000,
+      "session": { "startedAt": 1000000, "pausedAt": null, "pausedTotalMs": 0, "skippedMs": 0 },
+      "expected": { "startedAt": 1000000, "pausedAt": 1010000, "pausedTotalMs": 0, "skippedMs": 0 } },
+    { "name": "pause while paused", "action": "pause", "now": 1010000,
+      "session": { "startedAt": 1000000, "pausedAt": 1005000, "pausedTotalMs": 0, "skippedMs": 0 },
+      "expected": { "startedAt": 1000000, "pausedAt": 1005000, "pausedTotalMs": 0, "skippedMs": 0 } },
+    { "name": "resume adds the paused time", "action": "resume", "now": 1025000,
+      "session": { "startedAt": 1000000, "pausedAt": 1010000, "pausedTotalMs": 0, "skippedMs": 0 },
+      "expected": { "startedAt": 1000000, "pausedAt": null, "pausedTotalMs": 15000, "skippedMs": 0 } },
+    { "name": "resume while running", "action": "resume", "now": 1005000,
+      "session": { "startedAt": 1000000, "pausedAt": null, "pausedTotalMs": 0, "skippedMs": 0 },
+      "expected": { "startedAt": 1000000, "pausedAt": null, "pausedTotalMs": 0, "skippedMs": 0 } },
+    { "name": "resume with the clock gone back", "action": "resume", "now": 1005000,
+      "session": { "startedAt": 1000000, "pausedAt": 1010000, "pausedTotalMs": 0, "skippedMs": 0 },
+      "expected": { "startedAt": 1000000, "pausedAt": null, "pausedTotalMs": 0, "skippedMs": 0 } },
+    { "name": "skip mid-phase", "action": "skip", "now": 1100000,
+      "session": { "startedAt": 1000000, "pausedAt": null, "pausedTotalMs": 0, "skippedMs": 0 },
+      "expected": { "startedAt": 1000000, "pausedAt": null, "pausedTotalMs": 0, "skippedMs": 260000 } },
+    { "name": "skip while paused", "action": "skip", "now": 1500000,
+      "session": { "startedAt": 1000000, "pausedAt": 1400000, "pausedTotalMs": 0, "skippedMs": 0 },
+      "expected": { "startedAt": 1000000, "pausedAt": 1400000, "pausedTotalMs": 0, "skippedMs": 80000 } },
+    { "name": "skip when finished", "action": "skip", "now": 2300000,
+      "session": { "startedAt": 1000000, "pausedAt": null, "pausedTotalMs": 0, "skippedMs": 0 },
+      "expected": { "startedAt": 1000000, "pausedAt": null, "pausedTotalMs": 0, "skippedMs": 0 } }
+  ],
+  "clock": [
+    { "ms": 0, "text": "00:00" },
+    { "ms": 1, "text": "00:01" },
+    { "ms": 359001, "text": "06:00" },
+    { "ms": 360000, "text": "06:00" },
+    { "ms": 61000, "text": "01:01" },
+    { "ms": -5, "text": "00:00" }
+  ]
+}
