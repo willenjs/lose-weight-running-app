@@ -76,8 +76,9 @@ in workout time, and `announceCurrent` includes the first phase's line.
 
 What the service plays after any change, with `elapsed` from the session:
 
-- tones with `atMs ≥ elapsed − DUE_GRACE_MS` (250 ms, as `upcomingCues`),
-- speech with `atMs ≥ elapsed`,
+- every event (tone or speech) with `atMs ≥ elapsed − DUE_GRACE_MS` (250 ms,
+  as `upcomingCues`), so a phase line at a skip boundary survives the few ms
+  the payload takes to reach the service,
 - nothing while paused or finished.
 
 This matches today's app exactly: a fresh start plays the first phase line; a
