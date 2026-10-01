@@ -107,3 +107,14 @@ export function testSequence(settings) {
   const voiceExtras = speak && settings.voiceStyle === 'intense' ? ['coach.run'] : [];
   return { speak, voiceExtras, tones: [...beeps, ...fanfare] };
 }
+
+/**
+ * The settings with every volume but `field` turned off, so the audio test
+ * plays just that sound (the per-slider test buttons).
+ * @param {AudioSettings} settings
+ * @param {'voiceVolume' | 'beepVolume' | 'fanfareVolume'} field
+ * @returns {AudioSettings}
+ */
+export function soloSettings(settings, field) {
+  return { ...settings, voiceVolume: 0, beepVolume: 0, fanfareVolume: 0, [field]: settings[field] };
+}
