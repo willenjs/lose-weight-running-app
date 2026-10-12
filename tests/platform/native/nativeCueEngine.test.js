@@ -1,10 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
-import { findWorkout } from '../../../src/core/plan.js';
+import { SAMPLE } from '../../fixtures/workouts.js';
 import { startSession, pauseSession } from '../../../src/core/timer.js';
 import { DEFAULT_AUDIO_SETTINGS } from '../../../src/core/audioSettings.js';
 import { createNativeCueEngine } from '../../../src/platform/native/nativeCueEngine.js';
 
-const w = findWorkout('w1d1');
+const w = SAMPLE;
 const T0 = 1_000_000;
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 

@@ -61,9 +61,11 @@ confirm both pass. If `android/` changed, also run `npm run android:test`.
 - localStorage keys are `runningAssistant.*`, stored as
   `{ "version": 1, "data": ... }`. Bump the version and handle migration if
   the shape changes. Storage code must never throw.
-- Workout data in `src/core/plan.js` was transcribed from the program's
-  original screenshots (no longer kept in the repo);
-  `tests/core/plan.test.js` pins each total. Do not edit the plan unless the
+- Workout data in `src/core/plan.js` was transcribed from the schedule the
+  user supplied (5 weeks × 5 days: runs on days 1, 3, 5 between 5-minute
+  walks, brisk walks on days 2, 4); `tests/core/plan.test.js` pins each day
+  and week total. Timer, cue and coach tests use the fixed workouts in
+  `tests/fixtures/workouts.js`, not the plan. Do not edit the plan unless the
   user supplies the new schedule.
 - `layout-target/` holds the design mockups (HTML, screenshots, design
   notes) the UI follows. Reference only; it is not part of the build.

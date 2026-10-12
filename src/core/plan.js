@@ -5,8 +5,6 @@
 /** @param {number} seconds @returns {Phase} */
 const walk = (seconds) => ({ type: 'walk', seconds });
 /** @param {number} seconds @returns {Phase} */
-const jog = (seconds) => ({ type: 'jog', seconds });
-/** @param {number} seconds @returns {Phase} */
 const run = (seconds) => ({ type: 'run', seconds });
 
 /** @returns {Workout} */
@@ -14,24 +12,35 @@ function workout(week, day, phases) {
   return { id: `w${week}d${day}`, week, day, phases };
 }
 
-// Transcribed from the program's original screenshots (weekN-dayM), not kept in the repo.
+/**
+ * A run day: a 5-minute walk, `repeats` times (run, walk), then a 5-minute
+ * walk. The last interval walk and the cool-down are one phase so the coach
+ * does not announce two walks back to back.
+ * @returns {Phase[]}
+ */
+function intervals(runMinutes, walkMinutes, repeats) {
+  const phases = [walk(5 * 60)];
+  for (let i = 0; i < repeats; i++) phases.push(run(runMinutes * 60), walk(walkMinutes * 60));
+  phases[phases.length - 1] = walk((walkMinutes + 5) * 60);
+  return phases;
+}
+
+/** A brisk-walk day. @returns {Phase[]} */
+const briskWalk = (minutes) => [walk(minutes * 60)];
+
+/** Days 1, 3 and 5 run, days 2 and 4 walk. @returns {Workout[]} */
+function week(number, runDay, walkDay) {
+  return [runDay, walkDay, runDay, walkDay, runDay].map((phases, i) => workout(number, i + 1, phases));
+}
+
+// Transcribed from the schedule the user supplied on 2026-10-12.
 /** @type {Workout[]} */
 export const PLAN = [
-  workout(1, 1, [walk(6 * 60), jog(2 * 60), walk(6 * 60), jog(2 * 60), run(5 * 60)]),
-  workout(1, 2, [walk(7 * 60), jog(2 * 60), walk(7 * 60), jog(2 * 60), run(5 * 60)]),
-  workout(1, 3, [walk(7 * 60), jog(2 * 60), walk(7 * 60), jog(2 * 60), run(5 * 60)]),
-  workout(2, 1, [walk(6 * 60), jog(2 * 60), walk(6 * 60), jog(2 * 60), run(5 * 60)]),
-  workout(2, 2, [walk(7 * 60), jog(2 * 60), walk(7 * 60), jog(2 * 60), run(5 * 60)]),
-  workout(2, 3, [walk(6 * 60), jog(2 * 60), walk(6 * 60), jog(2 * 60), run(5 * 60)]),
-  workout(3, 1, [walk(9 * 60), jog(2 * 60), walk(9 * 60), jog(2 * 60), run(5 * 60)]),
-  workout(3, 2, [walk(9 * 60), jog(2 * 60), walk(9 * 60), jog(2 * 60), run(5 * 60)]),
-  workout(3, 3, [walk(7 * 60), jog(2 * 60), walk(7 * 60), jog(2 * 60), run(5 * 60)]),
-  workout(4, 1, [walk(9 * 60), jog(2 * 60), walk(9 * 60), jog(2 * 60), run(5 * 60)]),
-  workout(4, 2, [walk(5 * 60), jog(2 * 60), walk(5 * 60), jog(2 * 60), walk(5 * 60), jog(2 * 60), run(5 * 60)]),
-  workout(4, 3, [walk(7 * 60), jog(2 * 60), walk(7 * 60), jog(3 * 60), walk(7 * 60), jog(3 * 60), run(5 * 60)]),
-  workout(5, 1, [walk(7 * 60), jog(2 * 60), walk(7 * 60), jog(3 * 60), walk(7 * 60), jog(3 * 60), run(5 * 60)]),
-  workout(5, 2, [walk(9 * 60), jog(2 * 60), walk(9 * 60), jog(2 * 60), run(5 * 60)]),
-  workout(5, 3, [walk(7 * 60), jog(2 * 60), walk(7 * 60), jog(3 * 60), walk(7 * 60), jog(3 * 60), run(5 * 60)]),
+  ...week(1, intervals(3, 2, 5), briskWalk(30)),
+  ...week(2, intervals(4, 2, 5), briskWalk(30)),
+  ...week(3, intervals(5, 2, 5), briskWalk(40)),
+  ...week(4, intervals(7, 2, 4), briskWalk(45)),
+  ...week(5, intervals(10, 2, 3), briskWalk(50)),
 ];
 
 /** @param {string} id @returns {Workout | null} */
@@ -62,12 +71,31 @@ export function phaseSeconds(workout) {
   return totals;
 }
 
-/** @typedef {'warmup' | 'build' | 'recovery' | 'finale'} PhaseRole */
+/** @typedef {'warmup' | 'build' | 'recovery' | 'cooldown' | 'finale' | 'brisk'} PhaseRole */
 
 /** What a phase is for, used for labels and tips. @param {Workout} workout @returns {PhaseRole} */
 export function phaseRole(workout, index) {
   const phase = workout.phases[index];
-  if (index === 0) return 'warmup';
-  if (index === workout.phases.length - 1 && phase.type === 'run') return 'finale';
+  const isLast = index === workout.phases.length - 1;
+  if (index === 0) return isLast && phase.type === 'walk' ? 'brisk' : 'warmup';
+  if (isLast) return phase.type === 'walk' ? 'cooldown' : phase.type === 'run' ? 'finale' : 'build';
   return phase.type === 'walk' ? 'recovery' : 'build';
+}
+
+/**
+ * The repeating part of a run day ("3 min running, 2 min walking, 5 times"),
+ * or null when the workout is not walk, (run, walk)×n, walk with even intervals.
+ * @param {Workout} workout
+ * @returns {{ repeats: number, runSeconds: number, walkSeconds: number } | null}
+ */
+export function intervalPattern(workout) {
+  const { phases } = workout;
+  if (phases.length < 5 || phases[0].type !== 'walk' || phases.at(-1).type !== 'walk') return null;
+  const middle = phases.slice(1, -1); // run, walk, run, …, run
+  const [run, walk] = middle;
+  const even = middle.every((phase, i) => (i % 2 === 0
+    ? phase.type === 'run' && phase.seconds === run.seconds
+    : phase.type === 'walk' && phase.seconds === walk.seconds));
+  if (!even || middle.length % 2 === 0) return null;
+  return { repeats: (middle.length + 1) / 2, runSeconds: run.seconds, walkSeconds: walk.seconds };
 }

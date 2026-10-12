@@ -9,6 +9,7 @@
 
   const workout = $derived(findWorkout(app.workoutId));
   const stats = $derived(programStats(PLAN, app.progress));
+  const runMinutes = $derived(workout ? Math.round(phaseSeconds(workout).run / 60) : 0);
 
   function unmarkThis() {
     unmarkWorkout(workout.id);
@@ -24,7 +25,11 @@
       <span class="check"><Icon name="check" size={56} /></span>
       <h1>{t('finished.done')}</h1>
       <p class="summary num">
-        {t('finished.summary', { total: workoutMinutes(workout), run: Math.round(phaseSeconds(workout).run / 60) })}
+        {#if runMinutes > 0}
+          {t('finished.summary', { total: workoutMinutes(workout), run: runMinutes })}
+        {:else}
+          {workoutMinutes(workout)} {t('unit.min')}
+        {/if}
       </p>
 
       <div class="program">

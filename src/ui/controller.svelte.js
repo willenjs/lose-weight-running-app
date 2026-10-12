@@ -1,4 +1,4 @@
-import { PLAN, findWorkout, totalSeconds } from '../core/plan.js';
+import { PLAN, findWorkout, totalSeconds, intervalPattern } from '../core/plan.js';
 import {
   startSession, pauseSession, resumeSession, skipPhase, getState, shouldOfferResume,
 } from '../core/timer.js';
@@ -295,11 +295,12 @@ export function workoutMinutes(workout) {
   return Math.round(totalSeconds(workout) / 60);
 }
 
-/** Compact phase list, e.g. "C7 • T2 • R5". */
+/** Compact phase list: "5× R3 • C2" for a run day, else every phase, e.g. "C30". */
 export function phaseShorthand(workout) {
-  return workout.phases
-    .map((phase) => `${t(`short.${phase.type}`)}${Math.round(phase.seconds / 60)}`)
-    .join(' • ');
+  const short = (type, seconds) => `${t(`short.${type}`)}${Math.round(seconds / 60)}`;
+  const pattern = intervalPattern(workout);
+  if (pattern) return `${pattern.repeats}× ${short('run', pattern.runSeconds)} • ${short('walk', pattern.walkSeconds)}`;
+  return workout.phases.map((phase) => short(phase.type, phase.seconds)).join(' • ');
 }
 
 function showToast(text) {

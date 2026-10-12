@@ -46,25 +46,25 @@ describe('programStats', () => {
 
   it('starts at zero in week 1', () => {
     expect(programStats(PLAN, emptyProgress())).toEqual({
-      done: 0, total: 15, percent: 0, doneMinutes: 0, currentWeek: 1,
+      done: 0, total: 25, percent: 0, doneMinutes: 0, currentWeek: 1,
     });
   });
 
   it('counts done workouts, minutes and the week of the next workout', () => {
-    // 21 + 23 + 23 + 21 minutes.
-    expect(programStats(PLAN, doneIds('w1d1', 'w1d2', 'w1d3', 'w2d1'))).toEqual({
-      done: 4, total: 15, percent: 27, doneMinutes: 88, currentWeek: 2,
+    // 35 + 30 + 35 + 30 + 35 + 40 minutes; next is w2d2.
+    expect(programStats(PLAN, doneIds('w1d1', 'w1d2', 'w1d3', 'w1d4', 'w1d5', 'w2d1'))).toEqual({
+      done: 6, total: 25, percent: 24, doneMinutes: 205, currentWeek: 2,
     });
   });
 
   it('reports the last week when everything is done', () => {
     const all = doneIds(...PLAN.map((w) => w.id));
     expect(programStats(PLAN, all)).toEqual({
-      done: 15, total: 15, percent: 100, doneMinutes: 391, currentWeek: 5,
+      done: 25, total: 25, percent: 100, doneMinutes: 1026, currentWeek: 5,
     });
   });
 
   it('ignores stored ids that are not in the plan', () => {
-    expect(programStats(PLAN, doneIds('w1d1', 'w9d9'))).toMatchObject({ done: 1, percent: 7, doneMinutes: 21 });
+    expect(programStats(PLAN, doneIds('w1d1', 'w9d9'))).toMatchObject({ done: 1, percent: 4, doneMinutes: 35 });
   });
 });

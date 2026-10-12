@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { findWorkout } from '../../src/core/plan.js';
+import { SAMPLE } from '../fixtures/workouts.js';
 import {
   elapsedMs, pauseSession, resumeSession, skipPhase, phaseBoundaries, formatClock,
 } from '../../src/core/timer.js';
@@ -8,7 +8,7 @@ import {
 // Also read by the Java (phone) and Kotlin (watch) unit tests, so all three
 // implementations of the session arithmetic stay in step.
 const fixtures = JSON.parse(readFileSync(new URL('../fixtures/session-math.json', import.meta.url), 'utf8'));
-const workout = findWorkout(fixtures.workoutId);
+const workout = SAMPLE;
 const withId = (session) => ({ workoutId: fixtures.workoutId, ...session });
 const ACTIONS = {
   pause: (session, now) => pauseSession(session, now),

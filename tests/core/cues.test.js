@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { findWorkout } from '../../src/core/plan.js';
+import { SAMPLE } from '../fixtures/workouts.js';
 import { startSession, pauseSession } from '../../src/core/timer.js';
 import { upcomingCues, filterCues } from '../../src/core/cues.js';
 
-const w = findWorkout('w1d1'); // 360/120/360/120/300 s
+const w = SAMPLE; // 360/120/360/120/300 s
 const T0 = 1_000_000;
 const s = (seconds) => seconds * 1000;
 const fresh = () => startSession('w1d1', T0);

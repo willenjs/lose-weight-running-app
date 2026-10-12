@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { findWorkout } from '../../src/core/plan.js';
+import { SAMPLE } from '../fixtures/workouts.js';
 import { startSession, pauseSession, skipPhase, resumeSession } from '../../src/core/timer.js';
 import { upcomingCues } from '../../src/core/cues.js';
 import { coachExtras } from '../../src/core/coach.js';
 import { DEFAULT_AUDIO_SETTINGS } from '../../src/core/audioSettings.js';
 import { buildTimeline, workoutSchedule, scheduleFrom } from '../../src/core/timeline.js';
 
-const w = findWorkout('w1d1'); // 360/120/360/120/300 s; phases start at 0, 360, 480, 840, 960; ends at 1260
+const w = SAMPLE; // 360/120/360/120/300 s; phases start at 0, 360, 480, 840, 960; ends at 1260
 const T0 = 1_000_000;
 const s = (seconds) => seconds * 1000;
 const fresh = () => startSession('w1d1', T0);

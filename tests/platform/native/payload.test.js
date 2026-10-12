@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { DEFAULT_AUDIO_SETTINGS } from '../../../src/core/audioSettings.js';
-import { findWorkout } from '../../../src/core/plan.js';
+import { SAMPLE } from '../../fixtures/workouts.js';
 import { startSession, pauseSession, skipPhase } from '../../../src/core/timer.js';
 import { workoutSchedule } from '../../../src/core/timeline.js';
 import en from '../../../src/i18n/en.js';
@@ -9,7 +9,7 @@ import {
 } from '../../../src/platform/native/payload.js';
 
 const settings = { ...DEFAULT_AUDIO_SETTINGS, voiceVolume: 80, beepVolume: 40, fanfareVolume: 70 };
-const w = findWorkout('w1d1');
+const w = SAMPLE;
 const T0 = 1_000_000;
 const text = (event) => ('finish' in event ? 'done' : `${event.phaseType} ${event.seconds}`);
 const opts = (patch = {}) => ({

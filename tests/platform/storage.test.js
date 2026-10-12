@@ -43,6 +43,16 @@ describe('createStorage', () => {
     expect(storage.loadLang()).toBe('en');
   });
 
+  it('saves progress as version 2 and drops progress from the old 15-workout plan', () => {
+    const backend = fakeBackend({
+      [STORAGE_KEYS.progress]: JSON.stringify({ version: 1, data: { completed: { w1d1: '2026-09-26T10:00:00.000Z' } } }),
+    });
+    const storage = createStorage(backend);
+    expect(storage.loadProgress()).toEqual({ completed: {} });
+    storage.saveProgress({ completed: { w1d4: '2026-10-12T10:00:00.000Z' } });
+    expect(JSON.parse(backend.data.get(STORAGE_KEYS.progress)).version).toBe(2);
+  });
+
   it('clears the session', () => {
     const storage = createStorage(fakeBackend());
     storage.saveSession(session);

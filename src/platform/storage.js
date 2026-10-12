@@ -4,6 +4,9 @@ import { normalizeAudioSettings, migrateAudioSettings } from '../core/audioSetti
 const VERSION = 1;
 // v1 stored { muted }, v2 a master volume with switches, v3 AudioSettings.
 const SETTINGS_VERSION = 3;
+// v1 was the old 15-workout plan; its ids mean different workouts in the new
+// plan, so that progress is dropped instead of migrated.
+const PROGRESS_VERSION = 2;
 
 export const STORAGE_KEYS = {
   progress: 'runningAssistant.progress',
@@ -69,8 +72,8 @@ export function createStorage(backend = defaultBackend()) {
   }
 
   return {
-    loadProgress: () => read(STORAGE_KEYS.progress, isProgress, emptyProgress()),
-    saveProgress: (progress) => write(STORAGE_KEYS.progress, progress),
+    loadProgress: () => read(STORAGE_KEYS.progress, isProgress, emptyProgress(), { version: PROGRESS_VERSION }),
+    saveProgress: (progress) => write(STORAGE_KEYS.progress, progress, PROGRESS_VERSION),
     loadSession: () => read(STORAGE_KEYS.session, isSession, null),
     saveSession: (session) => write(STORAGE_KEYS.session, session),
     clearSession: () => remove(STORAGE_KEYS.session),
