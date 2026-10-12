@@ -23,7 +23,7 @@
     <p class="minutes num">{workoutMinutes(workout)}<span> {t('unit.min')}</span></p>
     <PhaseBar {workout} thin />
     <ul class="totals">
-      {#each TYPES as type (type)}
+      {#each TYPES.filter((type) => totals[type] > 0) as type (type)}
         <li class="phase-{type}">
           <span class="dot" aria-hidden="true"></span>{t(`phase.${type}`)}
           <span class="num">{Math.round(totals[type] / 60)}</span>

@@ -93,7 +93,7 @@ describe('PulseRun copy', () => {
 
   it('has a tip for every phase role and a short name for every phase', () => {
     const keys = [
-      ...['warmup', 'build', 'recovery', 'finale'].map((r) => `tip.${r}`),
+      ...['warmup', 'build', 'recovery', 'cooldown', 'finale', 'brisk'].map((r) => `tip.${r}`),
       ...['walk', 'jog', 'run'].map((p) => `short.${p}`),
     ];
     for (const lang of LANGS) for (const key of keys) expect(translate(lang, key), `${lang} ${key}`).not.toBe(key);

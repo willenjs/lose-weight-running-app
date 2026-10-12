@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { findWorkout } from '../../src/core/plan.js';
+import { SAMPLE } from '../fixtures/workouts.js';
 import {
   startSession, pauseSession, resumeSession, skipPhase, getState,
   formatClock, shouldOfferResume, RESUME_MAX_AGE_MS,
 } from '../../src/core/timer.js';
 
-const w = findWorkout('w1d1'); // 360/120/360/120/300 s, total 1260 s
+const w = SAMPLE; // 360/120/360/120/300 s, total 1260 s
 const T0 = 1_000_000;
 const s = (seconds) => seconds * 1000;
 const fresh = () => startSession('w1d1', T0);
@@ -128,6 +128,8 @@ describe('shouldOfferResume', () => {
   });
 
   it('rejects a session whose time has fully elapsed', () => {
-    expect(shouldOfferResume(fresh(), T0 + s(1260))).toBe(false);
+    // shouldOfferResume looks the workout up in the plan: w1d1 lasts 35 min.
+    expect(shouldOfferResume(fresh(), T0 + s(35 * 60))).toBe(false);
+    expect(shouldOfferResume(fresh(), T0 + s(35 * 60 - 1))).toBe(true);
   });
 });

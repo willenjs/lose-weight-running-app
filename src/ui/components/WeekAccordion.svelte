@@ -84,7 +84,7 @@
   .chevron { flex: none; display: grid; color: var(--text-muted); transition: transform 0.2s; }
   .chevron.open { transform: rotate(180deg); }
 
-  .days { list-style: none; margin: 0; padding: 0 0 12px; display: grid; gap: 8px; }
+  .days { list-style: none; margin: 0; padding: 0 0 12px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
   .day {
     width: 100%;
     min-height: 52px;

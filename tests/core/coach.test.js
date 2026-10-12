@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { findWorkout } from '../../src/core/plan.js';
+import { SAMPLE, SAMPLE_7 } from '../fixtures/workouts.js';
 import { coachExtras } from '../../src/core/coach.js';
 
-const w1d1 = findWorkout('w1d1'); // walk 6, jog 2, walk 6, jog 2, run 5 (min); half = 10.5 min
-const w4d2 = findWorkout('w4d2'); // 5/2/5/2/5/2/5 (min); half = 13 min
+const w1d1 = SAMPLE; // walk 6, jog 2, walk 6, jog 2, run 5 (min); half = 10.5 min
+const w4d2 = SAMPLE_7; // 5/2/5/2/5/2/5 (min); half = 13 min
 
 describe('coachExtras', () => {
   it('adds nothing in commands style', () => {
